@@ -1,7 +1,7 @@
 ---
 author: "Eric Daly"
 title: "Docker Versus Virtual Machines"
-date: "2020-02-21 08:10:00 -0400"
+date: 2020-02-21
 feature_image: "/images/pexels-pixabay-262353.jpg"
 tags: [
   "docker",
