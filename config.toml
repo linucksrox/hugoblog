@@ -1,0 +1,62 @@
+baseURL = "https://blog.dalydays.com/"
+title = "Eric Daly's Blog"
+
+theme = "casper3"
+
+#copyright = "Copyright © 2016–2021, Eric Daly; all rights reserved."
+paginate = 3
+languageCode = "en-us"
+DefaultContentLanguage = "en-us"
+enableInlineShortcodes = true
+footnoteReturnLinkContents = "^"
+
+[params]
+#  facebook = "https://facebook.com"
+#  twitter = "https://twitter.com"
+  github = "https://github.com/linucksrox"
+  description = "Sharing What I Know"
+  mainSections = ["post"]
+
+[menu]
+  [[menu.main]]
+    identifier = "about"
+    name = "About Me"
+    url = "/about/"
+    weight = 10
+  [[menu.main]]
+    identifier = "github-linucksrox"
+    name = "Github"
+    url = "https://github.com/linucksrox"
+    weight = 30
+
+[taxonomies]
+category = "categories"
+tag = "tags"
+series = "series"
+
+#[privacy]
+
+#  [privacy.vimeo]
+#    disabled = false
+#    simple = true
+
+#  [privacy.twitter]
+#    disabled = false
+#    enableDNT = true
+#    simple = true
+
+#  [privacy.instagram]
+#    disabled = false
+#    simple = true
+
+#  [privacy.youtube]
+#    disabled = false
+#    privacyEnhanced = true
+
+#[services]
+
+#  [services.instagram]
+#    disableInlineCSS = true
+
+#  [services.twitter]
+#    disableInlineCSS = true
