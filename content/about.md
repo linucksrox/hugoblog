@@ -1,11 +1,8 @@
-+++
-title = "About Me"
-aliases = ["about","contact"]
-author = "Eric Daly"
-#feature_image = "/images/hugo.png"
-+++
+---
+title: "About Me"
+---
 
-I'm always looking for new technology to experiment with and use. Over time I've added more and more systems to my server that I use every day (see below). I would rather do something myself even if it's easier or might work a little better to use something else. I use open source software whenever possible, and try to give back by sharing my experience and knowledge with other people on community forums like Nextcloud and reddit for "fake internet points" as one commenter said when I questioned why people downvote without commenting, but I digress.
+I'm always looking for new technology to experiment with and use. Over time I've added more and more systems to my server that I use every day (see below). I would rather do something myself even if it's easier or might work a little better to use something else. I use open source software whenever possible, and try to give back by sharing my experience and knowledge with other people on community forums like Nextcloud and reddit.
 
 What's Happening Right Now
 ===
