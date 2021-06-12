@@ -6,6 +6,7 @@ feature_image: "/images/2021-06-07_15-20-18.png"
 tags: [
   "android",
 ]
+summary: "Thoughts about learning Android and how to approach it"
 ---
 
 Back in 2010 when I got my first Android phone (the original HTC Evo 4g, before LTE was a thing) I was interested in learning Android development. I started doing a little bit of reading through the documentation, but was quickly overwhelmed with trying to understand all the new terminology like Activities and Intents. I built a few sample apps and played around a bit with it, but lost interest. I wish I would have kept going with it.

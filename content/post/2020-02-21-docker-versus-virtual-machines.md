@@ -6,6 +6,7 @@ feature_image: "/images/pexels-pixabay-262353.jpg"
 tags: [
   "docker",
 ]
+summary: "A dive into the difference between VMs and Docker containers"
 ---
 
 ## About Virtual Machines ##

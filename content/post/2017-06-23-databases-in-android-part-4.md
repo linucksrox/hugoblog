@@ -6,6 +6,7 @@ feature_image: "/images/pexels-sergei-starostin-6466141.jpg"
 tags: [
   "android",
 ]
+summary: "Part 4 of a mostly code look at using SQLite in Android (not using Room)"
 ---
 
 OK so in our Product sample, the ContentProvider looks like this:

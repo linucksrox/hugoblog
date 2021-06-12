@@ -6,6 +6,7 @@ feature_image: "/images/neonbrand-3GZNPBLImWc-unsplash.jpg"
 tags: [
   "jekyll",
 ]
+summary: "How to set up Jekyll for a blog (outdated)"
 ---
 I'm running [Xubuntu 16.04][xubuntu]. This method should be the same/similar in any Debian/Ubuntu distro. These are the steps I followed to get this thing working, using the terminal:
 ```

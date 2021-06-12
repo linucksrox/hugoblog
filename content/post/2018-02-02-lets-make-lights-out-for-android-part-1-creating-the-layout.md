@@ -6,6 +6,7 @@ feature_image: "/images/tiger-lights-out.jpg"
 tags: [
   "android",
 ]
+summary: "A quick start to create a layout for a Lights Out clone"
 ---
 
 I've always enjoyed the classic game Lights Out by Tiger Electronics. It's a fairly simple idea: there is a grid of 25 buttons which can be lit or not lit. When you press a button, it just toggles the light for the button you pressed plus any adjacent buttons. So you would start with a randomized board (or predetermined pattern), and the goal is to turn off all the lights while pressing the fewest buttons possible.

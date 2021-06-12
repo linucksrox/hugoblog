@@ -6,6 +6,7 @@ author: "Eric Daly"
 tags: [
   "android",
 ]
+summary: "Part 1 of a mostly code look at using SQLite in Android (not using Room)"
 ---
 
 Android provides an **easy** way to connect to SQLite databases. It's so easy, assuming you know how to query a database and follow some guides. But if you need to do anything more complicated than a few tables with low record counts you'll find that there's a lot more to it. Welcome to [ContentProviders](https://developer.android.com/guide/topics/providers/content-providers.html), [CursorLoaders](https://developer.android.com/reference/android/content/CursorLoader.html), and [CursorAdapters](https://developer.android.com/reference/android/widget/CursorAdapter.html). The good news is that a lot of these concepts translate into different environments besides Android.

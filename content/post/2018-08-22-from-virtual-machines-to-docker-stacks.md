@@ -6,6 +6,7 @@ feature_image: "/images/pexels-skitterphoto-730922.jpg"
 tags: [
   "docker",
 ]
+summary: "Going from everything in a VM to using Docker containers to run services"
 ---
 
 I've been attempting to learn Docker with the goal of using it in production at home and at work. I see several benefits to doing this:

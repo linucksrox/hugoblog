@@ -6,6 +6,7 @@ feature_image: "/images/pexels-josh-hild-2801312.jpg"
 tags: [
   "android",
 ]
+summary: "My story about learning Android development so far"
 ---
 Lately I've been learning to develop for Android using [Udacity][udacity]. There are a lot of other good resources available, but Udacity seems promising because the Android courses were developed by Google and Udacity.
 
