@@ -34,7 +34,7 @@ custom_css = "[css/contactme.css]"
     weight = 20
   [[menu.main]]
     identifier = "github-linucksrox"
-    name = "Github"
+    name = "Github (linucksrox)"
     url = "https://github.com/linucksrox"
     weight = 30
 
