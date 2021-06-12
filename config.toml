@@ -10,6 +10,8 @@ DefaultContentLanguage = "en-us"
 enableInlineShortcodes = true
 footnoteReturnLinkContents = "^"
 
+custom_css = "[css/contactme.css]"
+
 #disqusShortname = "blog-dalydays-com"
 
 [params]
@@ -25,6 +27,11 @@ footnoteReturnLinkContents = "^"
     name = "About Me"
     url = "/about/"
     weight = 10
+  [[menu.main]]
+    identifier = "contactme"
+    name = "Contact Me"
+    url = "/contactme/"
+    weight = 20
   [[menu.main]]
     identifier = "github-linucksrox"
     name = "Github"
