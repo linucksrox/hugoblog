@@ -9,6 +9,8 @@ tags: [
 summary: "How to use restic with Backblaze B2 and some shell scripts to help with scheduling/automation/monitoring"
 ---
 
+[Checkout the Github repo here](https://github.com/linucksrox/restic-scripts)
+
 # Intro and My Use Case
 I have been using restic for just over 3 years with Backblaze B2 and have saved money at the expense of my time. Before that I was running Crashplan home edition until they increased the price to $10/month (at the time I was only storing about 600GB off-site). Backblaze B2 was offering pay as you go pricing for $0.005/GB so I would be saving about $5/month. Fast forward to today, I'm still spending less than $10/month (but slowly reaching that threshold), while retaining encrypted, deduplicated snapshots going back to over 3 years ago. Today my total off-site backup size is around 1.6TB. These are the main benefits of pairing restic with B2 in my opinion:
 
