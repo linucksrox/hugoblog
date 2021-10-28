@@ -1,7 +1,7 @@
 ---
 title: "Using Restic with Backblaze B2 for Off-Site Backup"
 date: 2021-10-20
-feature_image: "/images/restic-logo.png"
+feature_image: "/images/restic_logo.png"
 tags: [
     "restic",
     "backup",
@@ -11,8 +11,11 @@ summary: "How to use restic with Backblaze B2 and some shell scripts to help wit
 
 [Checkout the Github repo here](https://github.com/linucksrox/restic-scripts)
 
-# Intro and My Use Case
-I have been using restic for just over 3 years with Backblaze B2 and have saved money at the expense of my time. Before that I was running Crashplan home edition until they increased the price to $10/month (at the time I was only storing about 600GB off-site). Backblaze B2 was offering pay as you go pricing for $0.005/GB so I would be saving about $5/month. Fast forward to today, I'm still spending less than $10/month (but slowly reaching that threshold), while retaining encrypted, deduplicated snapshots going back to over 3 years ago. Today my total off-site backup size is around 1.6TB. These are the main benefits of pairing restic with B2 in my opinion:
+# My Use Case
+I have been using restic for just over 3 years with Backblaze B2 and have saved money at the expense of my time. Before that I was running Crashplan home edition until they increased the price to $10/month (at the time I was only storing about 600GB off-site). Backblaze B2 was offering pay as you go pricing for $0.005/GB so I would be saving about $5/month. Fast forward to today, I'm still spending less than $10/month (but slowly reaching that threshold), while retaining encrypted, deduplicated snapshots going back to over 3 years ago. Today my total off-site backup size is around 1.6TB.
+
+# Why Restic?
+These are the main benefits of pairing restic with B2 in my opinion:
 
 - restic encrypts data before sending over the wire, so I don't have to worry about which data storage provider I use
 - restic deduplicates data which means it stores less data overall, decreasing my monthly backup cost but this is at the expense of using more computing power and taking longer to complete each snapshot
@@ -29,10 +32,14 @@ I'm not going into specifics about setting up Backblaze B2 so that is an excerci
 1. Mount any network shares you will be using as a source. You will most likely want to update `/etc/fstab` so that these will mount automatically on reboot.
 1. Install restic. You might be able to use your distro's package manager, but I would recommend just downloading the latest stable binary from Github: [https://github.com/restic/restic/releases](https://github.com/restic/restic/releases)
 1. Clone the restic-scripts repo: [https://github.com/linucksrox/restic-scripts](https://github.com/linucksrox/restic-scripts)
-1. Assuming you're creating a brand new restic repository, you'll need to start by initializing the repo before you can run backups. Follow the restic documentation for that: [https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html)
+1. Edit `restic_env.sh` to point to your Backblaze B2 bucket and configure your backups.
+1. Assuming you're creating a brand new restic repository, you'll need to start by initializing the repo before you can run backups. Run `restic_initialize_repo.sh` or follow the restic documentation for that: [https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html)
 1. Follow the instructions in the README there, and open an issue if you have any questions or something does not work.
 
 # Use Cases
+## Initializing A New Restic Repository
+Run `restic_initialize_repo.sh` which will create a brand new repository if data does not already exist there. If you're familiar with git, this is kind of similar to git init. No data is actually sent, but a config is created with your repository details, ready to track snapshots.
+
 ## Backing Up Data
 Run `restic_backup.sh` for this which will rely on `restic_unlock.sh`, `restic_env.sh` and `restic_excludelist.txt`. This just takes a backup snapshot using all the environment variables you already have configured. This can be scheduled with cron (see the README for a cron example and how to pipe the output to a log file).
 
