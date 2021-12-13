@@ -3,7 +3,7 @@ title: Using Restic with Backblaze B2 for Off-Site Backup
 date: 2021-10-20
 feature_image: /images/restic_logo.png
 draft: false
-thumbnail: images/uploads/restic_logo.png
+thumbnail: /static/images/uploads/restic_logo.png
 tags:
   - restic
   - backup
