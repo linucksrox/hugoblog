@@ -1,12 +1,13 @@
 ---
-author: "Eric Daly"
-title: "Docker Versus Virtual Machines"
+draft: false
+title: Docker Versus Virtual Machines
+summary: A dive into the difference between VMs and Docker containers
+author: Eric Daly
 date: 2020-02-21
-feature_image: "/images/pexels-pixabay-262353.jpg"
-tags: [
-  "docker",
-]
-summary: "A dive into the difference between VMs and Docker containers"
+thumbnail: images/uploads/pexels-pixabay-262353.jpg
+feature_image: /images/pexels-pixabay-262353.jpg
+tags:
+  - docker
 ---
 
 ## About Virtual Machines ##
