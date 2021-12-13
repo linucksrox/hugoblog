@@ -1,12 +1,13 @@
 ---
-title:  "Connecting to External Databases In Drupal 7"
-date:   2016-09-13
-author: "Eric Daly"
-feature_image: "/images/drupal7.jpg"
-tags: [
-  "drupal",
-]
-summary: "A demonstration of connecting to an external MySQL database in Drupal 7"
+draft: false
+title: Connecting to External Databases In Drupal 7
+summary: A demonstration of connecting to an external MySQL database in Drupal 7
+author: Eric Daly
+date: 2016-09-13
+thumbnail: images/uploads/drupal7.jpg
+feature_image: /images/drupal7.jpg
+tags:
+  - drupal
 ---
 
 Recently at work I was tasked with finding a way to connect our Drupal 7 intranet site to our client database in order to prepopulate form fields with client data which in turn makes it easier on the sales people. When it comes to sales people, it's always a double edged sword. On one edge it's more efficient and less error prone to automate what they do, because the nature of how they work is very error prone. On the other edge however, it's just more spoon feeding that they can't seem to resist, and another excuse for them to not understand how things work because the system handles it for them. It also places the blame on us if something goes wrong.  
