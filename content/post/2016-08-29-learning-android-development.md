@@ -1,12 +1,13 @@
 ---
-author: "Eric Daly"
-title: "My Android Development Journey"
+draft: false
+title: My Android Development Journey
+summary: My story about learning Android development so far
+author: Eric Daly
 date: 2016-08-29
-feature_image: "/images/pexels-josh-hild-2801312.jpg"
-tags: [
-  "android",
-]
-summary: "My story about learning Android development so far"
+thumbnail: images/uploads/pexels-josh-hild-2801312.jpg
+feature_image: /images/pexels-josh-hild-2801312.jpg
+tags:
+  - android
 ---
 Lately I've been learning to develop for Android using [Udacity][udacity]. There are a lot of other good resources available, but Udacity seems promising because the Android courses were developed by Google and Udacity.
 
