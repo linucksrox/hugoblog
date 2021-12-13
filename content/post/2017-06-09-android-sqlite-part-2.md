@@ -1,12 +1,13 @@
 ---
-title: 'Databases In Android - Part 2'
+draft: false
+title: Databases In Android - Part 2
+summary: Part 2 of a mostly code look at using SQLite in Android (not using Room)
+author: Eric Daly
 date: 2017-06-09
-feature_image: "/images/pexels-sergei-starostin-6466141.jpg"
-author: "Eric Daly"
-tags: [
-  "android",
-]
-summary: "Part 2 of a mostly code look at using SQLite in Android (not using Room)"
+thumbnail: images/uploads/pexels-sergei-starostin-6466141.jpg
+feature_image: /images/pexels-sergei-starostin-6466141.jpg
+tags:
+  - android
 ---
 
 Here's my thought of the day: I recently helped out on a public forum for some cloud file sync software I like to run, and this guy asked how to move a folder from one partition to another because he accidentally installed the package on the root partition with limited space. After I answered that he could just use the mv command (Ubuntu Server), he responded I think via email which included his signature and a little about himself, as in his credentials. Apparently he is a Linux Consultant.
