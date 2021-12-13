@@ -1,12 +1,14 @@
 ---
-title: "Using Restic with Backblaze B2 for Off-Site Backup"
+title: Using Restic with Backblaze B2 for Off-Site Backup
 date: 2021-10-20
-feature_image: "/images/restic_logo.png"
-tags: [
-    "restic",
-    "backup",
-]
-summary: "How to use restic with Backblaze B2 and some shell scripts to help with scheduling/automation/monitoring"
+feature_image: /images/restic_logo.png
+draft: false
+thumbnail: images/uploads/restic_logo.png
+tags:
+  - restic
+  - backup
+summary: How to use restic with Backblaze B2 and some shell scripts to help with
+  scheduling/automation/monitoring
 ---
 
 [Checkout the Github repo here](https://github.com/linucksrox/restic-scripts)
