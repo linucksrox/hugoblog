@@ -20,23 +20,32 @@ For reference, [here is the current state of the project on Github.](https://git
 ## 1. Create a new project
 
 * Click Start a new Android Studio project. 
-  ![](images/uploads/letsmakeandroidlogicpuzzle1.png)
+
+
+  ![](/images/letsmakeandroidlogicpuzzle1.png)
 * Set up your project.
-  ![](images/uploads/letsmakeandroidlogicpuzzle2.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle2.png)
+
   1. Name your app. I'll go with Lights Out.
   2. Your personal/business domain (can be anything, but should be unique so that the app's name doesn't conflict with an app with the same name in places like the Play store).
   3. Where are you storing your project? I recommend creating a folder for Android projects.
   4. Click Next.
 * Unless you have a specific use case, just use the default settings for Target Android Devices. Click Next.
-  ![](images/uploads/letsmakeandroidlogicpuzzle3.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle3.png)
 * We just need an empty activity for now, so click Next.
-  ![](images/uploads/letsmakeandroidlogicpuzzle4.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle4.png)
 * I'll use the defaults for now. As apps get more complicated we start thinking of better names to organize everything. For now, keep the defaults and click Finish.
-  ![](images/uploads/letsmakeandroidlogicpuzzle5.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle5.png)
 * Wait while android builds the project.
-  ![](images/uploads/letsmakeandroidlogicpuzzle6.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle6.png)
 * Expand app/java/com.domain.appname and app/res/layout to find the MainActivity.java and activity_main.xml files to get started.
-  ![](images/uploads/letsmakeandroidlogicpuzzle7.png)
+
+  ![](/images/letsmakeandroidlogicpuzzle7.png)
 
 ## 2. Create a layout
 
@@ -62,8 +71,10 @@ We'll define the dimensions and colors next, so don't worry about any errors you
 {% gist 2a5e598ba67558385718a27a2f8ab489 layout_main.xml %}
 
 * You probably noticed that there are some values we just referenced that don't exist, so we need to create those. We need to define the buttonWidth and buttonSpacing dimensions and the colorLightOn/colorLightOff colors. Starting with the dimensions, right click on app->res->values, and click New->Values resource file. Name it dimensions and click OK.
-  ![](images/uploads/new-values-resource.png)
-  ![](images/uploads/new-dimensions-file.png)
+
+  ![](/images/new-dimensions-file.png)
+
+  ![](/images/new-values-resource.png)
 * Open dimensions.xml (the one you just created), and add a dimension element named buttonWidth, setting the value to 60dp. Also add buttonSpacing, setting its value to 2dp. You can tweak these to your liking a little bit later.
 
 {% gist 2787528b39b70cbda9bfe6d5685bef17 dimensions.xml %}
@@ -73,7 +84,6 @@ We'll define the dimensions and colors next, so don't worry about any errors you
 {% gist ca46e1ae8aebbb28d833dd8191c31fab colors.xml %}
 
 * Back in the layout preview or layout design mode, you should now see the grid pattern.
-  ![](images/uploads/button-grid.png)
 
 Congratulations! You made a button grid layout, and you can tweak the colors or dimensions however you want before continuing on to the next part where we'll hook up the logic and actually toggle the lights on and off when you press the buttons.
 
