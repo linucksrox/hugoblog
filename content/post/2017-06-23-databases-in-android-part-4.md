@@ -1,12 +1,13 @@
 ---
+draft: false
 title: Databases In Android - Part 4
+summary: Part 4 of a mostly code look at using SQLite in Android (not using Room)
+author: Eric Daly
 date: 2017-06-23
-author: "Eric Daly"
-feature_image: "/images/pexels-sergei-starostin-6466141.jpg"
-tags: [
-  "android",
-]
-summary: "Part 4 of a mostly code look at using SQLite in Android (not using Room)"
+thumbnail: images/uploads/pexels-sergei-starostin-6466141.jpg
+feature_image: /images/pexels-sergei-starostin-6466141.jpg
+tags:
+  - android
 ---
 
 OK so in our Product sample, the ContentProvider looks like this:
