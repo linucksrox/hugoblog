@@ -1,12 +1,14 @@
 ---
-title: "How To Hot Swap ZFS Disks In Proxmox"
+title: How To Hot Swap ZFS Disks In Proxmox
 date: 2021-10-13
-feature_image: "/images/zfs-hot-swap.jpg"
-tags: [
-    "zfs",
-    "proxmox",
-]
-summary: "A guide to replacing a failed disk in a ZFS pool without shutting down or rebooting"
+feature_image: /images/zfs-hot-swap.jpg
+draft: false
+thumbnail: images/uploads/zfs-hot-swap.jpg
+tags:
+  - zfs
+  - proxmox
+summary: A guide to replacing a failed disk in a ZFS pool without shutting down
+  or rebooting
 ---
 
 Proxmox And ZFS
