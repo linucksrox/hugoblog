@@ -1,12 +1,13 @@
 ---
-title: "Let's Make Lights Out for Android Part 1 - Creating the Layout"
+draft: false
+title: Let's Make Lights Out for Android Part 1 - Creating the Layout
+summary: A quick start to create a layout for a Lights Out clone
+author: Eric Daly
 date: 2018-02-02
-author: "Eric Daly"
-feature_image: "/images/tiger-lights-out.jpg"
-tags: [
-  "android",
-]
-summary: "A quick start to create a layout for a Lights Out clone"
+thumbnail: images/uploads/tiger-lights-out.jpg
+feature_image: /images/tiger-lights-out.jpg
+tags:
+  - android
 ---
 
 I've always enjoyed the classic game Lights Out by Tiger Electronics. It's a fairly simple idea: there is a grid of 25 buttons which can be lit or not lit. When you press a button, it just toggles the light for the button you pressed plus any adjacent buttons. So you would start with a randomized board (or predetermined pattern), and the goal is to turn off all the lights while pressing the fewest buttons possible.
