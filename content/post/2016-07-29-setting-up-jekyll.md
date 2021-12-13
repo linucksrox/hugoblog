@@ -1,12 +1,13 @@
 ---
-author: "Eric Daly"
-title: "How To Get Going With Jekyll and GitHub Pages"
+draft: false
+title: How To Get Going With Jekyll and GitHub Pages
+summary: How to set up Jekyll for a blog (outdated)
+author: Eric Daly
 date: 2016-07-29
-feature_image: "/images/neonbrand-3GZNPBLImWc-unsplash.jpg"
-tags: [
-  "jekyll",
-]
-summary: "How to set up Jekyll for a blog (outdated)"
+thumbnail: https://holianh.github.io/assets/images/website-using-jekyll-github-pages.jpg
+feature_image: /images/neonbrand-3GZNPBLImWc-unsplash.jpg
+tags:
+  - jekyll
 ---
 I'm running [Xubuntu 16.04][xubuntu]. This method should be the same/similar in any Debian/Ubuntu distro. These are the steps I followed to get this thing working, using the terminal:
 ```
