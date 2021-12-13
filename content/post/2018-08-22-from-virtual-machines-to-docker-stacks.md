@@ -1,12 +1,13 @@
 ---
-title: "From Virtual Machines to Docker Stacks"
+draft: false
+title: From Virtual Machines to Docker Stacks
+summary: Going from everything in a VM to using Docker containers to run services
+author: Eric Daly
 date: 2018-08-22
-author: "Eric Daly"
-feature_image: "/images/pexels-skitterphoto-730922.jpg"
-tags: [
-  "docker",
-]
-summary: "Going from everything in a VM to using Docker containers to run services"
+thumbnail: images/uploads/pexels-skitterphoto-730922.jpg
+feature_image: /images/pexels-skitterphoto-730922.jpg
+tags:
+  - docker
 ---
 
 I've been attempting to learn Docker with the goal of using it in production at home and at work. I see several benefits to doing this:
