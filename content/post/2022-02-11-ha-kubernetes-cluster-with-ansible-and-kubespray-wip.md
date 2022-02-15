@@ -3,7 +3,7 @@ layout: blog
 draft: false
 title: HA Kubernetes Cluster With Ansible and Kubespray (WIP)
 date: 2022-02-11T15:11:35.321Z
-thumbnail: https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi0.wp.com%2Fcdn-prod.medicalnewstoday.com%2Fcontent%2Fimages%2Farticles%2F238%2F238262%2Fpepper-spray.jpg%3Fw%3D1155%26h%3D1541&f=1&nofb=1
+thumbnail: /images/pepperspray.jpg
 tags:
   - kubernetes
   - ansible
