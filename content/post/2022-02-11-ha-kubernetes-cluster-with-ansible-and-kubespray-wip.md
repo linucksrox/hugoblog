@@ -3,12 +3,13 @@ layout: blog
 draft: false
 title: HA Kubernetes Cluster With Ansible and Kubespray (WIP)
 date: 2022-02-11T15:11:35.321Z
+summary: This is an overview of how to build an HA Kubernetes cluster using
+  Ansible with Kubespray for reproducible results.
 thumbnail: /images/pepperspray.jpg
+feature_image: /images/pepperspray.jpg
 tags:
   - kubernetes
   - ansible
-summary: This is an overview of how to build an HA Kubernetes cluster using
-  Ansible with Kubespray for reproducible results.
 ---
 # This is currently a work in progress, mostly for my own benefit to track my progress through this build. There may be major steps missing!
 
