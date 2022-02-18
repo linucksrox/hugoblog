@@ -26,7 +26,11 @@ As a starting point, you need 6 VMs which are accessible via SSH so that Ansible
 * I wanted to use kube-vip for HA on the control plane API, so I created a new playbook that copies a yaml file into the static pod manifest folder which deploys kube-vip for the control plane nodes. So I run this playbook which does that task and then calls the kubespray cluster.yml playbook automatically.
 * Run the Kubespray playbook. Something like this: `ansible-playbook -i inventory/mycluster/hosts.yaml -b kube-vip-cluster.yml -u ubuntu`
 * Since I couldn't seem to get kube-vip working as a LoadBalancer service, I'm using MetalLB for that. Deploy MetalLB and don't forget to add the config which tells it which IP address pool to use.
+
+  * You can just enable MetalLB in Kubespray, but I opted to deploy using the official manifest.
 * Install an ingress controller such as Traefik.
+
+  * This requires a ClusterRole, ClusterRoleBinding, ServiceAccount, Daemonset or Deployment, and a Service of type LoadBalancer.
 * I still need to discuss storage. I will be attempting to use Longhorn by Rancher because it provides distributed storage for HA. Besides deploying Longhorn or any other storage solution, I need to revise the VM setup task to include allocating some amount of dedicated storage space to the worker node VMs.
 * Testing
 * Deploying stuff
