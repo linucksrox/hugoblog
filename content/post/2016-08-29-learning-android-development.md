@@ -1,10 +1,10 @@
 ---
 draft: false
-title: My Android Development Journey
 summary: My story about learning Android development so far
 author: Eric Daly
-date: 2016-08-29
 thumbnail: images/uploads/pexels-josh-hild-2801312.jpg
+title: My Android Development Journey
+date: 2016-08-29
 feature_image: /images/pexels-josh-hild-2801312.jpg
 tags:
   - android
@@ -21,7 +21,7 @@ At this point, I've decided to learn Android. I also realize I will never be an 
 
 I plan to learn Android, and I'm committing to writing a blog once a week, starting now. I want to mention John Sonmez at [Simple Programmer][simpleprogrammer]. I saw him on Youtube first, and wasn't sure of my opinion. After reading his blog and watching more videos though, I agree with a lot of what he says and it just started to click. This is me taking action and starting my blog.
 
-[![Simple Programmer Badge](http://simpleprogrammer.com/wp-content/uploads/2015/04/badge.png)](http://simpleprogrammer.com/2015/03/02/my-free-blogging-course-is-getting-unbelievable-results/)
+[![Simple Programmer Badge](https://simpleprogrammer.com/wp-content/uploads/2015/04/badge.png)](https://simpleprogrammer.com/wp-content/uploads/2015/04/badge.png)
 
 [udacity]: https://www.udacity.com/
 [birt]: http://www.eclipse.org/birt/
