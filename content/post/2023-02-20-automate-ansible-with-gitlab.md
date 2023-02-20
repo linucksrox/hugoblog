@@ -13,7 +13,7 @@ summary: Run your Ansible playbooks directly from GitLab pipelines, allowing you
 # Use Case
 M﻿y use case is currently to deploy new VMs to Proxmox, provision them, and finally bootstrap an RKE2 cluster in HA with 3 server nodes and 3 agents. The goal is for my pipeline to do all the heaving lifting, from cloning a template to 6 VMs, do all the provisioning such as setting static IPs and installing some packages, and then installing RKE2 and joining all nodes to the cluster. This involves a series of different playbooks that are run in different pipeline stages, all triggered from a single push. This also means that once my playbooks are stable and I don't necessarily want to push to build a new cluster, that I can manually run the pipeline from GitLab with a couple clicks to build out an entirely new cluster.
 
-# Reasoning
+# Why?
 
 A﻿nsible on its own is a great tool for provisioning servers and really doing any changes on a server that you used to (or still are) doing via SSH in a terminal. By moving things into an Ansible playbook, you get a more reliable, repeatable way to run through a specific set of tasks that you might want to reuse on different servers. A simple example might be installing Docker and docker compose on an Ubuntu server.
 
