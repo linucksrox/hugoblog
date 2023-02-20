@@ -3,7 +3,7 @@ layout: blog
 draft: false
 title: Automate Ansible With GitLab
 date: 2023-02-20T14:22:26.973Z
-feature_image: /images/screenshot-2023-02-20-at-10.09.02-am.png
+feature_image: /images/screenshot-2023-02-20-at-2.00.44-pm.png
 tags:
   - ansible
   - gitlab
