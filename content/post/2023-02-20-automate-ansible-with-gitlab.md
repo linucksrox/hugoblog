@@ -42,6 +42,8 @@ S﻿etting up pipelines and runners is pretty far beyond the scope of this one, 
 
 * Start with an empty repo
 * Add a basic Ansible inventory file `inventory.ini`
+
+  * I﻿ use ansible_ssh_common_args='-o StrictHostKeyChecking=no' but the alternative is to add trusted host keys into a GitLab CI/CD variable which is pretty annoying to do
 * Add a playbook for testing `deploy.yml`
 * Generate a new SSH key for Gitlab to connect to your Proxmox PVE host (or use one you already have)﻿
 * Add a Proxmox API Token credential in Promxox and record the token ID and secret﻿﻿
@@ -51,11 +53,11 @@ S﻿etting up pipelines and runners is pretty far beyond the scope of this one, 
   * P﻿VE_API_TOKEN_ID = the name of the token user
   * P﻿VE_API_USER = root@pam (in my case)
   * P﻿VE_HOST = \[IP address of your Proxmox host]
-  * S﻿SH_PRIVATE_KEY = private SSH key generated earlier
+  * S﻿SH_PRIVATE_KEY = private SSH key generated earlier (not the public key)
 
-In the file, copypasta this:
+In the file, copypasta this. before_script and after_script will run before/after every job. This works fine for me since every job I'm running is for Ansible playbooks. So in the deploy stage, it runs before_script, then the ansible-playbook, then the after_script cleanup (so we don't leave our private key hanging out there in a container on the runner). 
 
-```
+```yaml
 image: python:3-slim
 
 stages:
@@ -64,10 +66,20 @@ stages:
   - install
 
 before_script:
+  - 'command -v ssh-agent >/dev/null || ( apt update && apt install -y openssh-client )'
+  - eval $(ssh-agent -s)
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/gitlab_ed25519
+  - chmod 600 ~/.ssh/gitlab_ed25519
+  - export PATH="~/.local/bin:$PATH"
   - python3 -m pip install --user ansible
+
+after_script:
+  - rm -rf ~/.ssh/
 
 deploy:
   stage: deploy
   script:
-    - ansible-playbook -i inventory.ini --user ansible --private-key ~/.ssh/gitlab_ed25519 -e "api_host=${PVE_HOST} api_user=${PVE_API_USER} api_token_id=${PVE_API_TOKEN_ID} api_token_secret=${PVE_API_TOKEN}" deploy.yaml
+    - ansible-playbook -i inventory.ini --user root --private-key ~/.ssh/gitlab_ed25519 -e "api_host=${PVE_HOST} api_user=${PVE_API_USER} api_token_id=${PVE_API_TOKEN_ID} api_token_secret=${PVE_API_TOKEN}" deploy.yaml
 ```
