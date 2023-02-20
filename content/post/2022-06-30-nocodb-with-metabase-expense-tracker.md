@@ -1,6 +1,6 @@
 ---
 layout: blog
-draft: true
+draft: false
 title: Expense Tracker with Firefly III and Metabase
 date: 2023-02-20T13:40:56.599Z
 feature_image: /images/screenshot-2023-02-20-at-8.55.58-am.png
