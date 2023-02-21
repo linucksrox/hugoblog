@@ -57,7 +57,7 @@ S﻿etting up pipelines and runners is pretty far beyond the scope of this one, 
 
 In the file, copypasta this. before_script and after_script will run before/after every job. This works fine for me since every job I'm running is for Ansible playbooks. So in the deploy stage, it runs before_script, then the ansible-playbook, then the after_script cleanup (so we don't leave our private key hanging out there in a container on the runner). 
 
-{﻿{< highlight yaml >}}
+{﻿{< highlight >}}
 image: python:3-slim
 
 stages:
