@@ -81,5 +81,7 @@ after_script:
 deploy:
   stage: deploy
   script:
-    - ansible-playbook -i inventory.ini --user root --private-key ~/.ssh/gitlab_ed25519 -e "api_host=${PVE_HOST} api_user=${PVE_API_USER} api_token_id=${PVE_API_TOKEN_ID} api_token_secret=${PVE_API_TOKEN}" deploy.yaml
+    - ansible-playbook -i inventory.ini --user root --private-key ~/.ssh/gitlab_ed25519 \
+      -e "api_host=${PVE_HOST} api_user=${PVE_API_USER} api_token_id=${PVE_API_TOKEN_ID} \
+      api_token_secret=${PVE_API_TOKEN}" deploy.yaml
 ```
