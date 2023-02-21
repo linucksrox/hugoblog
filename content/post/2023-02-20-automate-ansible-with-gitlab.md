@@ -57,7 +57,7 @@ S﻿etting up pipelines and runners is pretty far beyond the scope of this one, 
 
 In the file, copypasta this. before_script and after_script will run before/after every job. This works fine for me since every job I'm running is for Ansible playbooks. So in the deploy stage, it runs before_script, then the ansible-playbook, then the after_script cleanup (so we don't leave our private key hanging out there in a container on the runner). 
 
-{﻿{< highlight >}}
+```yaml
 image: python:3-slim
 
 stages:
@@ -82,4 +82,4 @@ deploy:
   stage: deploy
   script:
     - ansible-playbook -i inventory.ini --user root --private-key ~/.ssh/gitlab_ed25519 -e "api_host=${PVE_HOST} api_user=${PVE_API_USER} api_token_id=${PVE_API_TOKEN_ID} api_token_secret=${PVE_API_TOKEN}" deploy.yaml
-{{< /highlight >}}
+```
