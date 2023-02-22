@@ -1,7 +1,7 @@
 baseURL = "https://blog.dalydays.com/"
 title = "Eric Daly's Blog"
 
-theme = "casper3"
+theme = "PaperMod"
 
 #copyright = "Copyright © 2016–2021, Eric Daly; all rights reserved."
 paginate = 3
