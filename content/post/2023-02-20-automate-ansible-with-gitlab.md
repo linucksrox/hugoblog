@@ -46,7 +46,7 @@ S﻿etting up pipelines and runners is pretty far beyond the scope of this one, 
   * I﻿ use ansible_ssh_common_args='-o StrictHostKeyChecking=no' but the alternative is to add trusted host keys into a GitLab CI/CD variable which is pretty annoying to do
 * Add a playbook for testing `deploy.yml`
 * Generate a new SSH key for Gitlab to connect to your Proxmox PVE host (or use one you already have)﻿
-* Add a Proxmox API Token credential in Promxox and record the token ID and secret﻿﻿
+* Add a Proxmox API Token credential in Proxmox and record the token ID and secret
 * A﻿dd GitLab CI/CD variables
 
   * P﻿VE_API_TOKEN = the actual generated token
