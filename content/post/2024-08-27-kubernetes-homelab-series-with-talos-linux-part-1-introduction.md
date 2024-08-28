@@ -28,7 +28,7 @@ Finally, and this will actually be the first topic, I will be using Talos Linux 
 - You have a disk or virtual disk to dedicate for storage (or you can do clustered storage, we'll talk about it)
 - ... I think that's it? For now at least.
 
-# Getting Started With Talos
+# Getting Started With Talos (Overview)
 
 https://www.talos.dev/
 Talos Linux is Linux designed for Kubernetes – secure, immutable, and minimal.
@@ -49,11 +49,12 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - For disks, choose something on SSD storage (required for reasonable etcd performance)
   - Enable Discard and SSD emulation options
   - 20GB should be plenty
-  - Minimum of 4 CPU cores
-  - Minimum of 4GB RAM
+  - 4CPU (2 minimum)
+  - 4GB RAM (2 minimum)
   - VLAN 50, DHCP (optional)
-- Start the VMs, and check the console for each to verify they are running and have an IP assigned on the kubernetes vlan
+- Start the VMs, and check the console for each to verify they are running (and have an IP assigned on the kubernetes VLAN if applicable)
 - Check out the talos project: TBD
+  - TODO: spell out the process for generating machine configs, secrets, storing in git, etc. Should I do SOPS + age first?
 - Install talosctl and verify it's the same version you are deploying
 - Generate new secrets which creates secrets.yaml
   - `talosctl gen secrets`
