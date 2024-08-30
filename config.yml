@@ -1,6 +1,6 @@
 baseURL: 'https://blog.dalydays.com/'
 title: Eric Daly's Blog
-paginate: 5
+paginate: 10
 
 theme: PaperMod
 
