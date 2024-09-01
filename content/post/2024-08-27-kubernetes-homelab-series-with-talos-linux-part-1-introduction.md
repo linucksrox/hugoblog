@@ -89,7 +89,8 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - Feel free to change the cluster name (default is "talos-proxmox-cluster")
   - `talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --output-dir _out --install-image factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.7.6`
   - **IMPORTANT!** Make a backup copy of `talosconfig` and store it securely. See above about encrypting this file with SOPS and only storing the encrypted version in a git repo.
-- Create patches (elaboration TBD)
+- Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.7/talos-guides/configuration/patching/
+  - TODO
 - Store talos secret somewhere (git repo)
 - Apply foundational components in order
 - Encrypted secret manager - sealed secrets - TBD
