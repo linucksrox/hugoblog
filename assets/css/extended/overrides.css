@@ -1,6 +1,6 @@
 :root {
     --line-height:1.1em;
-    --post-width:960px;
+    --post-width:1200px;
     --monospace: monospace;
 }
 .main.post {
@@ -11,10 +11,4 @@
 	margin: auto;
     margin-right: 50px;
 	padding: var(--content-gap)var(--gap)0;
-}
-
-.post-content {
-	font-size: 14px;
-    line-height: 1.2em;
-	color: var(--content);
 }
