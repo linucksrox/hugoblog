@@ -1,13 +1,13 @@
 :root {
     --line-height:1.1em;
-    --post-width:1200px;
+    --post-width:1400px;
     --monospace: monospace;
 }
 .main.post {
-    --main-width:880px;
+    --main-width:1200px;
     position: relative;
 	min-height: calc(100vh - var(--header-height) - var(--footer-height));
-	max-width: calc(var(--main-width) + var(--gap) * 2);
+	max-width: 1200px;
 	margin: auto;
     margin-right: 50px;
 	padding: var(--content-gap)var(--gap)0;
