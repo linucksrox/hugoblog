@@ -58,9 +58,9 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
 - Start the VMs, and check the console for each to verify they are running (and have an IP assigned on the kubernetes VLAN if applicable)
 
 ## Talos Linux Setup
-- Check out the talos project: https://www.talos.dev/v1.7/talos-guides/install/virtualized-platforms/proxmox/
+- Check out the talos project: https://www.talos.dev/v1.8/talos-guides/install/virtualized-platforms/proxmox/
 - On whichever machine you are using to manage Talos such as your local workstation, install talosctl and verify it's the same version you are deploying
-  - See https://www.talos.dev/v1.7/talos-guides/install/talosctl/
+  - See https://www.talos.dev/v1.8/talos-guides/install/talosctl/
   - The recommended method is `brew install siderolabs/tap/talosctl`
   - The alternative method is `curl -sL https://talos.dev/install | sh`
   - Note: if you are upgrading talosctl, the `curl` method will tell you it's already installed with a message saying `To force re-downloading, delete '/usr/local/bin/talosctl' then run me again.`
@@ -93,20 +93,124 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   ```
   - Encrypt secrets.yaml: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
   - Encrypt talosconfig: `sops --encrypt _out/talosconfig > talosconfig.encrypted`
+  - Encrypt controlplane.yaml: `sops --encrypt _out/controlplane.yaml > _out/controlplane.encrypted.yaml`
+  - Encrypt worker.yaml: `sops --encrypt _out/worker.yaml > _out/worker.encrypted.yaml`
 - **IMPORTANT!** Now's a good time to create `.gitignore` and make sure you exclude `secrets.yaml` and `talosconfig` from your git repo
 ```ini
 secrets.yaml
 talosconfig
+controlplane.yaml
+worker.yaml
 ```
 - Initialize the git repo: `git init`
 - Make your initial git commit: `git add .` and `git commit -m "initial commit with encrypted cluster secrets and talosconfig"`
 - Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
-  - TODO
-- Store talos secret somewhere (git repo)
-- Apply foundational components in order
-- Encrypted secret manager - sealed secrets - TBD
-- LoadBalancer service - TBD
-- Certificate manager - cert-manager - TBD
-- CSI driver - democratic-csi - TBD
-- Ingress provider - traefik - TBD
-- Backup manager - velero - TBD
+  - You can install with the base config (controlplane.yaml or worker.yaml), then apply node specific patches afterward. You could also duplicate the whole thing for each node with specific customizations such as static IP, but that can complicate upgrades and make it harder to keep things encrypted.
+  - `mkdir -p patches`
+  - Create patches for each controlplane and worker node:
+    - cp1.yaml
+    ```yaml
+    network:
+        hostname: taloscp1
+        interfaces:
+            - addresses:
+                - 10.0.50.161/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+              vip:
+                ip: 10.0.50.160
+        nameservers:
+            - 192.168.1.22
+    ```
+    - cp2.yaml
+    ```yaml
+    network:
+        hostname: taloscp2
+        interfaces:
+            - addresses:
+                - 10.0.50.162/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+              vip:
+                ip: 10.0.50.160
+        nameservers:
+            - 192.168.1.22
+    ```
+    - cp3.yaml
+    ```yaml
+    network:
+        hostname: taloscp3
+        interfaces:
+            - addresses:
+                - 10.0.50.163/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+              vip:
+                ip: 10.0.50.160
+        nameservers:
+            - 192.168.1.22
+    ```
+    - wk1.yaml
+    ```yaml
+    network:
+        hostname: taloswk1
+        interfaces:
+            - addresses:
+                - 10.0.50.171/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+        nameservers:
+            - 192.168.1.22
+    ```
+    - wk2.yaml
+    ```yaml
+    network:
+        hostname: taloswk2
+        interfaces:
+            - addresses:
+                - 10.0.50.172/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+        nameservers:
+            - 192.168.1.22
+    ```
+    - wk3.yaml
+    ```yaml
+    network:
+        hostname: taloswk3
+        interfaces:
+            - addresses:
+                - 10.0.50.173/24
+              routes:
+                - network: 0.0.0.0/0
+                  gateway: 10.0.50.1
+        nameservers:
+            - 192.168.1.22
+    ```
+- Add your patches to the git repo: `git add .` and `git commit -m "add patches"`
+- Push your git repo somewhere like GitHub or GitLab (I'll just assume you know how already or can search DuckDuckGo)
+
+## Talos Linux Installation
+Finally, time to actually install Talos!
+
+- Check the console for Talos CP1 in Proxmox to get the IP address (should have been assigned via DHCP). Let's say it's 10.0.50.129
+- Install using base controlplane.yaml config: `talosctl apply-config --insecure --nodes 10.0.50.129 --file _out/controlplane.yaml`
+- Follow this same process for each of the other 2 controlplane nodes.
+- Follow the same process for all worker nodes, but use `_out/worker.yaml`: `talosctl apply-config --insecure --nodes 10.0.50.132 --file _out/worker.yaml`
+- Watch the console in Proxmox to see it install and reboot. When you see the Kubernetes version and Kubelet status Healthy on all 6 nodes, you can proceed to patching each node to assign static IPs.
+- Patch each node using the corresponding patch file: `talosctl ...` 
+
+# Next Steps
+Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
+
+- Encrypted secret manager - sealed secrets
+- LoadBalancer service - MetalLB
+- Certificate manager - cert-manager
+- CSI driver - democratic-csi
+- Ingress provider - traefik
+- Backup manager - velero
