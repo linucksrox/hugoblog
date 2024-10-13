@@ -222,6 +222,7 @@ Finally, time to actually install Talos!
 - Follow the same process for all worker nodes, but use `_out/worker.yaml`: `talosctl apply-config --insecure --nodes 10.0.50.132 --file _out/worker.yaml`
 - Watch the console in Proxmox to see it install and reboot. When you see the Kubernetes version and Kubelet status Healthy on all 6 nodes, you can proceed to patching each node to assign static IPs.
 - Patch each node using the corresponding patch file: e.g. `talosctl patch mc --e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.yaml`
+- Note: the VIP doesn't come online until after bootstrapping the cluster. Don't be like me and try to troubleshoot this right now :)
 
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
