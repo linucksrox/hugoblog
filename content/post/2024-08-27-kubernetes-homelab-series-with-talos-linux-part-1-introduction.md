@@ -252,8 +252,8 @@ Finally, time to actually install Talos!
   - OR
   - `export TALOSCONFIG="_out/talosconfig"`
 - Set endpoints list and nodes list if youi get tired of specifying them every time you run talosctl commands:
-  - `talosctl config endpoint 10.0.50.161`
-  - `talosctl config node 10.0.50.171`
+  - `talosctl config endpoint 10.0.50.161 10.0.50.162 10.0.50.163`
+  - `talosctl config node 10.0.50.161 10.0.50.162 10.0.50.163 10.0.50.171 10.0.50.172 10.0.50.173`
 - Bootstrap the cluster:
   - `talosctl bootstrap -n 10.0.50.161`
 - Grab kubeconfig - download to current directory
@@ -275,7 +275,7 @@ Finally, time to actually install Talos!
   taloswk2   Ready    <none>          6m22s   v1.31.1   10.0.50.172   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
   taloswk3   Ready    <none>          6m18s   v1.31.1   10.0.50.173   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
   ```
-- In testing I noticed some stuff that's supposed to run on all control plane nodes was only runninn on cp1 and cp3, so check that and reboot each control plane node one at a time to resolve if you see the same issue:
+- In testing I noticed some stuff that's supposed to run on all control plane nodes was only runninn on cp1 and cp3, so check that and reboot each control plane node one at a time to resolve if you see the same issue. You would be looking for `kube-apiserver-[node]`, `kube-controller-manager-[node]`, and `kube-scheduler-[node]`.
   - `kubectl get po -n kube-system`
   - `talosctl reboot -n 10.0.50.161`
   - `talosctl reboot -n 10.0.50.162`
