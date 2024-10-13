@@ -221,8 +221,65 @@ Finally, time to actually install Talos!
 - Follow this same process for each of the other 2 controlplane nodes.
 - Follow the same process for all worker nodes, but use `_out/worker.yaml`: `talosctl apply-config --insecure --nodes 10.0.50.132 --file _out/worker.yaml`
 - Watch the console in Proxmox to see it install and reboot. When you see the Kubernetes version and Kubelet status Healthy on all 6 nodes, you can proceed to patching each node to assign static IPs.
-- Patch each node using the corresponding patch file: e.g. `talosctl patch mc --e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.yaml`
+- Patch each node using the corresponding patch file. Endpoint should be the control plane node you're targeting, for controlplane setup. For workers, the endpoint needs to be one of the control plane nodes, and since you've already updated to 10.0.50.161 in this example, you can use the first control plane as the endpoint when patching all the worker nodes:
+  -  `talosctl patch mc -e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.yaml`
+  -  `talosctl patch mc -e 10.0.50.130 -n 10.0.50.130 --patch @patches/cp2.yaml`
+  -  `talosctl patch mc -e 10.0.50.131 -n 10.0.50.131 --patch @patches/cp3.yaml`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.132 --patch @patches/wk1.yaml`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.133 --patch @patches/wk2.yaml`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.134 --patch @patches/wk3.yaml`
 - Note: the VIP doesn't come online until after bootstrapping the cluster. Don't be like me and try to troubleshoot this right now :)
+- Also, apply this other patch to all nodes for automatic kubelet cert rotation which is required for metrics-server (if you want to use that). Save in `./patches/kubelet-cert-rotation.patch`
+  ```yaml
+  ---
+  machine:
+    kubelet:
+      extraArgs:
+        rotate-server-certificates: true
+  
+  cluster:
+    extraManifests:
+      - https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml
+  ```
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.161 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.162 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.163 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.171 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.172 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.173 --patch @patches/kubelet-cert-rotation.patch` 
+- Configure talosctl by either copying talosconfig to $HOME/.talos/config or exporting the ENV variable:
+  - `cp _out/talosconfig ~/.talos/config`
+  - OR
+  - `export TALOSCONFIG="_out/talosconfig"`
+- Set endpoints list and nodes list if youi get tired of specifying them every time you run talosctl commands:
+  - `talosctl config endpoint 10.0.50.161`
+  - `talosctl config node 10.0.50.171`
+- Bootstrap the cluster:
+  - `talosctl bootstrap -n 10.0.50.161`
+- Grab kubeconfig - download to current directory
+  - `talosctl kubeconfig -n 10.0.50.161 .`
+- Move kubeconfig if this will be used as your default cluster
+  - `mv kubeconfig ~/.kube/config`
+- Install kubectl
+  - `curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"`
+  - `install -m 755 /usr/local/bin/kubectl`
+  - `kubectl version`
+- TEST!
+  - `kubectl get node -o wide`
+  ```
+  NAME       STATUS   ROLES           AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE         KERNEL-VERSION   CONTAINER-RUNTIME
+  taloscp1   Ready    control-plane   6m34s   v1.31.1   10.0.50.161   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  taloscp2   Ready    control-plane   6m34s   v1.31.1   10.0.50.162   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  taloscp3   Ready    control-plane   6m2s    v1.31.1   10.0.50.163   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  taloswk1   Ready    <none>          6m26s   v1.31.1   10.0.50.171   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  taloswk2   Ready    <none>          6m22s   v1.31.1   10.0.50.172   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  taloswk3   Ready    <none>          6m18s   v1.31.1   10.0.50.173   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
+  ```
+- In testing I noticed some stuff that's supposed to run on all control plane nodes was only runninn on cp1 and cp3, so check that and reboot each control plane node one at a time to resolve if you see the same issue:
+  - `kubectl get po -n kube-system`
+  - `talosctl reboot -n 10.0.50.161`
+  - `talosctl reboot -n 10.0.50.162`
+  - `talosctl reboot -n 10.0.50.163`
 
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
@@ -233,3 +290,4 @@ Now you should have a Talos Linux cluster running with each node having its own 
 - CSI driver - democratic-csi
 - Ingress provider - traefik
 - Backup manager - velero
+- Metrics server
