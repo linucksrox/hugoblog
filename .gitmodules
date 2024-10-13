@@ -1,9 +1,6 @@
 [submodule "casper3"]
 	path = casper3
 	url = https://github.com/jonathanjanssens/hugo-casper3.git
-[submodule "themes/PaperMod"]
-	path = themes/PaperMod
-	url = https://github.com/adityatelange/hugo-PaperMod
 [submodule "themes/PaperModX"]
 	path = themes/PaperModX
 	url = https://github.com/reorx/hugo-PaperModX.git
