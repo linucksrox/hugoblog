@@ -12,25 +12,27 @@ summary: This in depth series will walk through building a Kubernetes cluster be
 ---
 # Introduction
 
-We are going to cover building a Kubernetes cluster from the ground up, suitable for a homelab or production use (mostly). I will go into much greater depth than a lot of tutorials do, well beyond "the basics."
+This series will go through the process of building a Kubernetes cluster on Proxmox using Talos Linux from the ground up. I intend for this to go into a lot more depth than a lot of basic tutorials, and by the end you should have a cluster that you can actually trust to run workloads with high availability, backups, etc.
 
-I use Proxmox in my homelab, but this could be followed easily in VMWare or other hypervisors of choice.
+I use Proxmox in my homelab, but this could be followed easily in ESXi or other hypervisors of choice.
 
-Building a bare cluster is easy. Making it work for you is not. Not because it's hard, but there are a lot of pieces and decisions to make. As many problems as Kubernetes solves, it introduces many new challenges and ways of thinking about things. One of the hardest problems is storage, which we will talk about and I will demonstrate how to do this in a homelab. Storage can be done with a single disk, and not just for hostPath. You don't have to use Rancher Longhorn. And you don't even have to use NFS. We'll be looking at NFS and NVMe-oF and how to actually get them working (for reference: https://ssdcentral.net/getting-started-with-nvme-over-fabrics-with-tcp/ ).
+Building a bare cluster is easy. Making it work for you is not. Not because it's hard, but because there are a lot of components and decisions to make. As many problems as Kubernetes solves, it introduces many new challenges and new ways of thinking about things. One of the hardest problems in my opinion is storage, which we will talk about and I will show you how I decided to do this in my homelab. It is possible to achieve dynamically provisioned storage with a single disk, and not just with hostPath. You don't have to use Rancher Longhorn, OpenEBS (Mayastor) or Portworx. You don't have to use NFS. It's mix and match!
 
 Other topics will include LoadBalancer services using MetalLB, secret management using Sealed Secrets (and also talking about SOPS with age), cluster backup of the etcd cluster along with Velero to back up cluster resources, and ingress with Traefik (plus Gateway API which is the successor to ingress controllers).
 
 Finally, and this will actually be the first topic, I will be using Talos Linux because I believe it's the easiest option overall considering the initial build and also ongoing maintenance such as OS upgrades and Kubernetes version upgrades.
 
+Using Talos Linux in theory makes managing the cluster itself very simple because their API is the only way to make changes and they include safe upgrade options for both the Talos nodes and Kubernetes versions. It does introduce some complexity, especially relating to storage, but we'll talk about that a little later.
+
 # Prerequisites and Assumptions
 
 - You have a homelab of some sort and can download ISOs and create VMs.
-- You have a disk or virtual disk to dedicate for storage (or you can do clustered storage, we'll talk about it)
-- ... I think that's it? For now at least.
+- You have a disk or virtual disk to dedicate for storage (or you can do clustered storage, we'll talk about it).
+- You are able to read and follow along :)
 
 # Getting Started With Talos (Overview)
 
-https://www.talos.dev/
+https://www.talos.dev/  
 Talos Linux is Linux designed for Kubernetes – secure, immutable, and minimal.
 
 - Supports cloud platforms, bare metal, and virtualization platforms
@@ -52,7 +54,7 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - 20GB should be plenty
   - 4CPU (2 minimum)
   - 4GB RAM (2 minimum)
-  - VLAN 50, DHCP (optional)
+  - VLAN 50, DHCP (VLAN is optional, use whatever VLAN you want for your cluster if you have one, otherwise leave this blank)
 - Start the VMs, and check the console for each to verify they are running (and have an IP assigned on the kubernetes VLAN if applicable)
 
 ## Talos Linux Setup
@@ -64,32 +66,41 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - Note: if you are upgrading talosctl, the `curl` method will tell you it's already installed with a message saying `To force re-downloading, delete '/usr/local/bin/talosctl' then run me again.`
     - Delete the current binary with `sudo rm -rf /usr/local/bin/talosctl`
     - Re-run `curl -sL https://talos.dev/install | sh`
+- Create a new folder for your Talos cluster. You will be initializing a git repo here and eventually pushing to a remote repo.
+  - `mkdir -p taloscluster && cd taloscluster`
 - Generate new Talos secrets. These are used to authenticate with the Talos cluster.
   - `talosctl gen secrets`
   - This stores a file in the current directory named `secrets.yaml`
-  - **IMPORTANT!** Make a backup copy of `secrets.yaml` and store it securely.
-  - In Part 2, we will discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo. The TLDR steps for now are as follows:
-    - Install `sops` and `age` binaries locally
-    - Generate a key pair with `age-keygen`
-    - Create a local SOPS config file named `.sops.yaml` with the following contents. This tells SOPS which files to encrypt, and which encryption key to use.
-      ```
-      ---
-      creation_rules:
-        - path_regex: /*secrets(\.encrypted)?.yaml$
-          age: replace-with-your-public-key
-        - path_regex: /*talosconfig(\.encrypted)?$
-          age: replace-with-your-public-key
-      ```
-    - Encrypt the file `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
-    - **IMPORTANT!** Only store the encrypted version of the file in the git repo, which means the best practice would be to add `secrets.yaml` to .gitignore so it doesn't get committed. You would clone the repo, decrypt `secrets.encrypted.yaml` to `secrets.yaml` and use that temporarily to build a new node, etc. if needed.
-- Enable QEMU support: https://www.talos.dev/v1.7/talos-guides/install/virtualized-platforms/proxmox/#qemu-guest-agent-support-iso
-  - Go to https://factory.talos.dev/ - Bare Metal Machine > 1.7.6 (or the version you want) > AMD64 > Check siderolabs/qemu-guest-agent > (no customization) > copy the factory image string under "Initial Install" section, e.g. `factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.7.6`
-- Generate base machine configs: https://www.talos.dev/v1.7/talos-guides/install/virtualized-platforms/proxmox/#generate-machine-configurations
-  - The CONTROL_PLANE_IP should be the IP of one of the control plane nodes, or optionally the virtual IP if you plan on load balancing the control plane (highly recommended for HA: https://www.talos.dev/v1.7/talos-guides/network/vip/)
+- Build the Talos image you will be using to install Talos to each node. This allows you to add extensions which add capabilities such as iSCSI support and QEMU guest agent for Proxmox.
+  - Go to https://factory.talos.dev/ - Bare Metal Machine > 1.8.1 (or the version you want) > AMD64 > Check siderolabs/qemu-guest-agent > Check siderolabs/iscsi-tools > (no customization) > copy the factory image string under "Initial Install" section, e.g. `factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1`
+- Generate base machine configs: https://www.talos.dev/v1.8/talos-guides/install/virtualized-platforms/proxmox/#generate-machine-configurations
+  - The `CONTROL_PLANE_IP` should be the IP of one of the control plane nodes, or optionally the virtual IP if you plan on load balancing the control plane (highly recommended for HA: https://www.talos.dev/v1.8/talos-guides/network/vip/)
   - Feel free to change the cluster name (default is "talos-proxmox-cluster")
-  - `talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --output-dir _out --install-image factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.7.6`
-  - **IMPORTANT!** Make a backup copy of `talosconfig` and store it securely. See above about encrypting this file with SOPS and only storing the encrypted version in a git repo.
-- Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.7/talos-guides/configuration/patching/
+    ```bash
+    talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --output-dir _out --install-image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1
+    ```
+- In Part 2, we will discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo. The TLDR steps for now are as follows:
+  - Install `sops` and `age` binaries locally
+  - Generate a key pair with `age-keygen`
+  - Create a local SOPS config file named `.sops.yaml` with the following contents. This tells SOPS which files to encrypt, and which encryption key to use.
+  ```yaml
+  ---
+  creation_rules:
+    - path_regex: /*secrets(\.encrypted)?.yaml$
+      age: replace-with-your-public-key
+    - path_regex: /*talosconfig(\.encrypted)?$
+      age: replace-with-your-public-key
+  ```
+  - Encrypt secrets.yaml: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
+  - Encrypt talosconfig: `sops --encrypt _out/talosconfig > talosconfig.encrypted`
+- **IMPORTANT!** Now's a good time to create `.gitignore` and make sure you exclude `secrets.yaml` and `talosconfig` from your git repo
+```ini
+secrets.yaml
+talosconfig
+```
+- Initialize the git repo: `git init`
+- Make your initial git commit: `git add .` and `git commit -m "initial commit with encrypted cluster secrets and talosconfig"`
+- Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
   - TODO
 - Store talos secret somewhere (git repo)
 - Apply foundational components in order
