@@ -110,87 +110,105 @@ worker.yaml
   - Create patches for each controlplane and worker node:
     - cp1.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloscp1
         interfaces:
-            - addresses:
-                - 10.0.50.161/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
-              vip:
-                ip: 10.0.50.160
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.161/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
+            vip:
+              ip: 10.0.50.160
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
     - cp2.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloscp2
         interfaces:
-            - addresses:
-                - 10.0.50.162/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
-              vip:
-                ip: 10.0.50.160
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.162/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
+            vip:
+              ip: 10.0.50.160
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
     - cp3.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloscp3
         interfaces:
-            - addresses:
-                - 10.0.50.163/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
-              vip:
-                ip: 10.0.50.160
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.163/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
+            vip:
+              ip: 10.0.50.160
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
     - wk1.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloswk1
         interfaces:
-            - addresses:
-                - 10.0.50.171/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.171/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
     - wk2.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloswk2
         interfaces:
-            - addresses:
-                - 10.0.50.172/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.172/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
     - wk3.yaml
     ```yaml
-    network:
+    machine:
+      network:
         hostname: taloswk3
         interfaces:
-            - addresses:
-                - 10.0.50.173/24
-              routes:
-                - network: 0.0.0.0/0
-                  gateway: 10.0.50.1
+          - deviceSelector:
+              busPath: "0*" # This is an example; adjust based on your hardware
+            addresses:
+              - 10.0.50.173/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 10.0.50.1
         nameservers:
-            - 192.168.1.22
+          - 192.168.1.22
     ```
 - Add your patches to the git repo: `git add .` and `git commit -m "add patches"`
 - Push your git repo somewhere like GitHub or GitLab (I'll just assume you know how already or can search DuckDuckGo)
@@ -203,7 +221,7 @@ Finally, time to actually install Talos!
 - Follow this same process for each of the other 2 controlplane nodes.
 - Follow the same process for all worker nodes, but use `_out/worker.yaml`: `talosctl apply-config --insecure --nodes 10.0.50.132 --file _out/worker.yaml`
 - Watch the console in Proxmox to see it install and reboot. When you see the Kubernetes version and Kubelet status Healthy on all 6 nodes, you can proceed to patching each node to assign static IPs.
-- Patch each node using the corresponding patch file: `talosctl ...` 
+- Patch each node using the corresponding patch file: e.g. `talosctl patch mc --e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.yaml`
 
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
