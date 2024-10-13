@@ -46,7 +46,7 @@ Install these tools whatever machine you would use to interact with your git rep
   - (optional) `encrypted_regex` defines which keys within the file to encrypt - omit this to encrypt all values
   - `age` is the public key used for encryption
   - Sample `.sops.yaml` file configured for Talos Linux secrets.yaml and talosconfig files:
-```
+```yaml
 ---
 creation_rules:
   - path_regex: /*secrets(\.encrypted)?.yaml$

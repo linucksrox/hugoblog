@@ -2,7 +2,7 @@ baseURL: 'https://blog.dalydays.com/'
 title: Eric Daly's Blog
 paginate: 10
 
-theme: PaperMod
+theme: PaperModX
 
 minify:
   disableXML: true
