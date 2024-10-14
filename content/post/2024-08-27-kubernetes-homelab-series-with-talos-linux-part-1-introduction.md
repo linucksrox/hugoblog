@@ -77,7 +77,7 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - The `CONTROL_PLANE_IP` should be the IP of one of the control plane nodes, or optionally the virtual IP if you plan on load balancing the control plane (highly recommended for HA: https://www.talos.dev/v1.8/talos-guides/network/vip/)
   - Feel free to change the cluster name (default is "talos-proxmox-cluster")
     ```bash
-    talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --output-dir _out --install-image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1
+    talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --with-secrets secrets.yaml --output-dir _out --install-image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1
     ```
 - In Part 2, we will discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo. The TLDR steps for now are as follows:
   - Install `sops` and `age` binaries locally
