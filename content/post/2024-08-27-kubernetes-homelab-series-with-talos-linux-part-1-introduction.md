@@ -109,7 +109,9 @@ controlplane.yaml
 worker.yaml
 ```
 - Initialize the git repo: `git init`
-- Make your initial git commit: `git add .` and `git commit -m "initial commit with encrypted cluster secrets and talosconfig"`
+- Make your initial git commit: `git add .`
+- Double check that only encrypted yaml files and talosconfig are staged: `git status`
+- Commit: `git commit -m "initial commit with encrypted cluster secrets and talosconfig"`
 - Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
   - You can install with the base config (controlplane.yaml or worker.yaml), then apply node specific patches afterward. You could also duplicate the whole thing for each node with specific customizations such as static IP, but that can complicate upgrades and make it harder to keep things encrypted.
   - `mkdir -p patches`
