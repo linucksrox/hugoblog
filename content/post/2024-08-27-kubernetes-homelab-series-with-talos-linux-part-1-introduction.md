@@ -116,7 +116,7 @@ worker.yaml
   - You can install with the base config (controlplane.yaml or worker.yaml), then apply node specific patches afterward. You could also duplicate the whole thing for each node with specific customizations such as static IP, but that can complicate upgrades and make it harder to keep things encrypted.
   - `mkdir -p patches`
   - Create patches for each controlplane and worker node:
-    - cp1.yaml
+    - cp1.patch
     ```yaml
     machine:
       network:
@@ -134,7 +134,7 @@ worker.yaml
         nameservers:
           - 192.168.1.22
     ```
-    - cp2.yaml
+    - cp2.patch
     ```yaml
     machine:
       network:
@@ -152,7 +152,7 @@ worker.yaml
         nameservers:
           - 192.168.1.22
     ```
-    - cp3.yaml
+    - cp3.patch
     ```yaml
     machine:
       network:
@@ -170,7 +170,7 @@ worker.yaml
         nameservers:
           - 192.168.1.22
     ```
-    - wk1.yaml
+    - wk1.patch
     ```yaml
     machine:
       network:
@@ -186,7 +186,7 @@ worker.yaml
         nameservers:
           - 192.168.1.22
     ```
-    - wk2.yaml
+    - wk2.patch
     ```yaml
     machine:
       network:
@@ -202,7 +202,7 @@ worker.yaml
         nameservers:
           - 192.168.1.22
     ```
-    - wk3.yaml
+    - wk3.patch
     ```yaml
     machine:
       network:
@@ -230,14 +230,15 @@ Finally, time to actually install Talos!
 - Follow the same process for all worker nodes, but use `_out/worker.yaml`: `talosctl apply-config --insecure --nodes 10.0.50.132 --file _out/worker.yaml`
 - Watch the console in Proxmox to see it install and reboot. When you see the Kubernetes version and Kubelet status Healthy on all 6 nodes, you can proceed to patching each node to assign static IPs.
 - Patch each node using the corresponding patch file. Endpoint should be the control plane node you're targeting, for controlplane setup. For workers, the endpoint needs to be one of the control plane nodes, and since you've already updated to 10.0.50.161 in this example, you can use the first control plane as the endpoint when patching all the worker nodes:
-  -  `talosctl patch mc -e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.yaml`
-  -  `talosctl patch mc -e 10.0.50.130 -n 10.0.50.130 --patch @patches/cp2.yaml`
-  -  `talosctl patch mc -e 10.0.50.131 -n 10.0.50.131 --patch @patches/cp3.yaml`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.132 --patch @patches/wk1.yaml`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.133 --patch @patches/wk2.yaml`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.134 --patch @patches/wk3.yaml`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.129 -n 10.0.50.129 --patch @patches/cp1.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.130 -n 10.0.50.130 --patch @patches/cp2.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.131 -n 10.0.50.131 --patch @patches/cp3.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.132 --patch @patches/wk1.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.133 --patch @patches/wk2.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.134 --patch @patches/wk3.patch`
 - Note: the VIP doesn't come online until after bootstrapping the cluster. Don't be like me and try to troubleshoot this right now :)
-- Also, apply this other patch to all nodes for automatic kubelet cert rotation which is required for metrics-server (if you want to use that). Save in `./patches/kubelet-cert-rotation.patch`
+- If you want to deploy metrics-server (see https://www.talos.dev/v1.8/kubernetes-guides/configuration/deploy-metrics-server/) then enable `rotate-server-certificates: true` on all nodes and add the extra manifests to automatically approve the CSRs and include metrics-server. This is OPTIONAL.
+  - Create `./patches/kubelet-cert-rotation.patch`
   ```yaml
   ---
   machine:
@@ -248,13 +249,14 @@ Finally, time to actually install Talos!
   cluster:
     extraManifests:
       - https://raw.githubusercontent.com/alex1989hu/kubelet-serving-cert-approver/main/deploy/standalone-install.yaml
+      - https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
   ```
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.161 --patch @patches/kubelet-cert-rotation.patch`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.162 --patch @patches/kubelet-cert-rotation.patch`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.163 --patch @patches/kubelet-cert-rotation.patch`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.171 --patch @patches/kubelet-cert-rotation.patch`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.172 --patch @patches/kubelet-cert-rotation.patch`
-  -  `talosctl patch mc -e 10.0.50.161 -n 10.0.50.173 --patch @patches/kubelet-cert-rotation.patch` 
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.161 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.162 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.163 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.171 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.172 --patch @patches/kubelet-cert-rotation.patch`
+  -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.173 --patch @patches/kubelet-cert-rotation.patch` 
 - Configure talosctl by either copying talosconfig to $HOME/.talos/config or exporting the ENV variable:
   - `cp _out/talosconfig ~/.talos/config`
   - OR
