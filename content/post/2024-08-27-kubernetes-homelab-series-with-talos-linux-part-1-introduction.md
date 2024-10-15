@@ -291,6 +291,19 @@ Finally, time to actually install Talos!
   - `talosctl reboot -n 10.0.50.162`
   - `talosctl reboot -n 10.0.50.163`
 
+## Test A Workload
+- Create deployment: `kubectl create deploy nginx-test --image nginx --replicas 1`
+- Expose via NodePort service: `kubectl expose deploy nginx-test --type NodePort --port 80`
+- Get the node the pod is running on: `kubectl get po -o wide`
+  - Node which worker node from the Node column
+- Get the port on that node: `kubectl get svc`
+  - Note the larger port number on the right side in the Ports column, likely in the 31000 range
+- In testing, my pod was deployed to taloswk3 which has IP 10.0.50.173, and the port was 31458
+  - Visit http://10.0.50.173:31458 in the browser to confirm you see the "Welcome to nginx!" page
+- Clean up test resources:
+  - `kubectl delete svc nginx-test`
+  - `kubectl delete deploy nginx-test`
+
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
 
