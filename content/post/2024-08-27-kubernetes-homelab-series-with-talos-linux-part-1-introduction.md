@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Homelab Series Part 1 - Introduction and Talos Installation (WIP)
+title: Kubernetes Homelab Series Part 1 - Introduction and Talos Installation
 date: 2024-08-27T23:06:24.328Z
 tags:
   - kubernetes
