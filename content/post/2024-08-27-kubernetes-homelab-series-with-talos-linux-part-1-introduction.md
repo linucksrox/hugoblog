@@ -90,10 +90,10 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
       age: replace-with-your-public-key
     - path_regex: /*talosconfig(\.encrypted)?$
       age: replace-with-your-public-key
-    - path_regex: /*controlplane(\.encrypted)?$
+    - path_regex: /*controlplane(\.encrypted)?.yaml$
       encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
       age: age1gkhxw26n8nknr6f7tsd3c56su775t5kxqs5w45k9xjz2htqnh5fsmppv6l
-    - path_regex: /*worker(\.encrypted)?$
+    - path_regex: /*worker(\.encrypted)?.yaml$
       encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
       age: age1gkhxw26n8nknr6f7tsd3c56su775t5kxqs5w45k9xjz2htqnh5fsmppv6l
   ```
