@@ -295,7 +295,7 @@ Finally, time to actually install Talos!
 - Create deployment: `kubectl create deploy nginx-test --image nginx --replicas 1`
 - Expose via NodePort service: `kubectl expose deploy nginx-test --type NodePort --port 80`
 - Get the node the pod is running on: `kubectl get po -o wide`
-  - Node which worker node from the Node column
+  - Note which worker node from the Node column
 - Get the port on that node: `kubectl get svc`
   - Note the larger port number on the right side in the Ports column, likely in the 31000 range
 - In testing, my pod was deployed to taloswk3 which has IP 10.0.50.173, and the port was 31458
