@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: Kubernetes Homelab Series Part 1 - Introduction and Talos Installation
-date: 2024-08-27T23:06:24.328Z
+date: 2024-10-12
 tags:
   - kubernetes
   - homelab
