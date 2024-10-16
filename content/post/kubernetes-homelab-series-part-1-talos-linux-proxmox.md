@@ -308,10 +308,11 @@ Finally, time to actually install Talos!
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
 
-- Encrypted secret manager - sealed secrets
 - LoadBalancer service - MetalLB
 - Certificate manager - cert-manager
 - CSI driver - democratic-csi
 - Ingress provider - traefik
-- Backup manager - velero
+- Backups - Velero + etcd backup with talosctl
+- Secret encryption - Sealed Secrets
 - Metrics server
+- Grafana + Loki?
