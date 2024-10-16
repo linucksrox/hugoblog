@@ -7,8 +7,7 @@ tags:
   - kubernetes
   - homelab
   - talos
-summary: This in depth series will walk through building a Kubernetes cluster beyond the basics, including dynamically provisioned storage, certificate
-  management, and backups.
+summary: This in depth series will walk through building a Kubernetes cluster beyond the basics, including dynamically provisioned storage, certificate management, and backups.
 ---
 # Introduction
 
@@ -113,7 +112,9 @@ worker.yaml
 - Double check that only encrypted yaml files and talosconfig are staged: `git status`
 - Commit: `git commit -m "initial commit with encrypted cluster secrets and talosconfig"`
 - Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
-  - You can install with the base config (controlplane.yaml or worker.yaml), then apply node specific patches afterward. You could also duplicate the whole thing for each node with specific customizations such as static IP, but that can complicate upgrades and make it harder to keep things encrypted.
+  - Best practice is to install the base config to each node (`controlplane.yaml` or `worker.yaml`), then apply patches to customize nodes to set the name, static IP, etc.
+  - To set a static IP, you have to specify either an `interface` or a `deviceSelector` (mutually exclusive). By default, Predictable Interface Names are not enabled, meaning your ethernet name might be something like `enxSOMETHING` based on the MAC address. One way around this is to enable Predictable Interface Names by setting the kernel argument `net.ifnames=0` on first boot, or you can use a generic `deviceSelector` like I did in the example below. If you only have 1 NIC, this will work just fine. If you mave multiple NICs, you can run `talosctl get links -n [node-ip]` and select the interface name from the ID column, or maybe the MAC address from the HW ADDR column. I'm just using `busPath: "0*"` to select the default NIC without changing any other options.
+    - https://www.talos.dev/v1.8/talos-guides/network/predictable-interface-names/#single-network-interface
   - `mkdir -p patches`
   - Create patches for each controlplane and worker node:
     - cp1.patch
