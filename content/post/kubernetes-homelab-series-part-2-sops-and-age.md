@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: Kubernetes Homelab Series Part 2 - Secrets With SOPS and age
-date: 2024-10-12T13:12:09.310Z
+date: 2024-10-13
 tags:
   - kubernetes
   - homelab

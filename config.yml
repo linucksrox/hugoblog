@@ -35,6 +35,12 @@ params:
   github: 'https://github.com/linucksrox'
   description: Sharing What I Know
   ShowBreadCrumbs: true
+  ShowReadingTime: true
+  ShowToc: true
+  TocOpen: true
+  ShowPostNavLinks: true
+  ShowCodeCopyButtons: true
+  comments: true
   mainSections:
     - post
 
