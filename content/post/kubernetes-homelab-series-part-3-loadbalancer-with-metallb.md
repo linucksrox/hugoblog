@@ -1,8 +1,8 @@
 ---
 layout: blog
-draft: true
+draft: false
 title: Kubernetes Homelab Series Part 3 - LoadBalancer With MetalLB
-date: 2024-08-28T13:20:32.765Z
+date: 2024-10-17
 tags:
   - kubernetes
   - homelab
