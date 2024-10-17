@@ -13,6 +13,8 @@ summary: This in depth series will walk through building a Kubernetes cluster be
 
 This series will go through the process of building a Kubernetes cluster on Proxmox using Talos Linux from the ground up. I intend for this to go into a lot more depth than a lot of basic tutorials, and by the end you should have a cluster that you can actually trust to run workloads with high availability, backups, etc.
 
+The goal of this series is not to be a Kubernetes tutorial, but more of a step by step to building a Talos Linux cluster that has all the components you might need, along with some insights I've learned over time that you might find helpful.
+
 I use Proxmox in my homelab, but this could be followed easily in ESXi or other hypervisors of choice.
 
 Building a bare cluster is easy. Making it work for you is not. Not because it's hard, but because there are a lot of components and decisions to make. As many problems as Kubernetes solves, it introduces many new challenges and new ways of thinking about things. One of the hardest problems in my opinion is storage, which we will talk about and I will show you how I decided to do this in my homelab. It is possible to achieve dynamically provisioned storage with a single disk, and not just with hostPath. You don't have to use Rancher Longhorn, OpenEBS (Mayastor) or Portworx. You don't have to use NFS. It's mix and match!
@@ -275,7 +277,11 @@ Finally, time to actually install Talos!
   - `curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"`
   - `install -m 755 /usr/local/bin/kubectl`
   - `kubectl version`
-- TEST!
+- Similar to talosctl, configure kubectl by either copying kubectl to $HOME/.kube/config or exporting the ENV variable:
+  - `cp kubeconfig ~/.kube/config`
+  - OR
+  - `export KUBECONFIG="/root/whereami/kubeconfig"`
+- Verify you can see the nodes
   - `kubectl get node -o wide`
   ```
   NAME       STATUS   ROLES           AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE         KERNEL-VERSION   CONTAINER-RUNTIME
