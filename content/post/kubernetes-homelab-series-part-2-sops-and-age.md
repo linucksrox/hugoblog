@@ -47,18 +47,23 @@ I'm just sticking to basic usage and running sops commands manually for now, at 
   - Copy down the public key, which is needed to encrypt. The public key is included in the private key file in case you need to reference it in the future.
 - Create a config file locally `.sops.yaml` (usually stored and committed in the repo where it is used) which tells SOPS which files to encrypt, which keys to encrypt within the file, and which encryption to use. See the documentation for more details around the config file.
   - `path_regex` tells sops which files to encrypt if not specified
-  - (optional) `encrypted_regex` defines which keys within the file to encrypt - omit this to encrypt all values
+  - (optional) `encrypted_regex` defines which keys within the file to encrypt - omit this to encrypt all values, otherwise ONLY specific values will be encrypted and others will be left in plain text
   - `age` is the public key used for encryption
   - Sample `.sops.yaml` file configured for Talos Linux secrets.yaml and talosconfig files:
 ```yaml
----
-creation_rules:
-  - path_regex: /*secrets(\.encrypted)?.yaml$
-    encrypted_regex: "(^id|secret|bootstraptoken|secretboxencryptionsecret|token|ca|crt|key)$"
-    age: age1.....(public age key goes here)
-  - path_regex: /*talosconfig(\.encrypted)?$
-    age: age1.....(public age key goes here)
-```
+  ---
+  creation_rules:
+    - path_regex: /*secrets(\.encrypted)?.yaml$
+      age: replace-with-your-public-key
+    - path_regex: /*talosconfig(\.encrypted)?$
+      age: replace-with-your-public-key
+    - path_regex: /*controlplane(\.encrypted)?.yaml$
+      encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
+      age: replace-with-your-public-key
+    - path_regex: /*worker(\.encrypted)?.yaml$
+      encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
+      age: replace-with-your-public-key
+  ```
 
 # Encrypting and Decrypting Files
 Now you are ready to actually encrypt/decrypt values in your files. This is a good point to come up with a naming convention if you want to keep separate copies of the decrypted files, because you should make sure you add the decrypted version to .gitignore since the whole point of this is to make sure you don't commit plaintext secrets to a repo anywhere (public or private).
