@@ -21,7 +21,11 @@ This is a modern encryption tool which can be used to encrypt whole files, or in
 # Installation And Setup
 This is a quick walk through of getting SOPS and age installed and how to use SOPS to encrypt/decrypt YAML files. We'll do this for Talos Linux secrets.yaml and for talosconfig so they can be safely stored in a public repo.
 
-Install these tools whatever machine you would use to interact with your git repo. Upgrading is the same process as initially installing since we just pull the binary and copy into place.
+If you are looking for a video for more depth into SOPS, check out https://www.youtube.com/watch?v=V2PRhxphH2w
+
+There is also a VSCode extension that allows you to edit plaintext versions of files, but it will automatically encrypt/decrypt the saved file if this is better for your workflow. Check out https://marketplace.visualstudio.com/items?itemName=signageos.signageos-vscode-sops
+
+I'm just sticking to basic usage and running sops commands manually for now, at least to get started. You could also build some of these processes into a pipeline.
 
 ## Installation
 - Curl the latest `SOPS` binary and install
