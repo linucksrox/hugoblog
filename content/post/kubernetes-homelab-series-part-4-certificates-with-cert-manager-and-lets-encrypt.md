@@ -3,7 +3,7 @@ layout: blog
 draft: true
 title: Kubernetes Homelab Series Part 4 - Certificates With cert-manager and
   Let's Encrypt
-date: 2024-08-28T13:32:43.305Z
+date: 2024-08-28
 tags:
   - kubernetes
   - homelab

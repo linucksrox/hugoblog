@@ -2,7 +2,7 @@
 layout: blog
 draft: true
 title: Kubernetes Homelab Series Part 7 - Backups With Velero
-date: 2024-08-28T13:44:32.722Z
+date: 2024-08-28
 tags:
   - kubernetes
   - homelab

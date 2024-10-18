@@ -2,7 +2,7 @@
 layout: blog
 draft: true
 title: Kubernetes Homelab Series Part 5 - Storage With democratic-csi
-date: 2024-08-28T13:37:06.828Z
+date: 2024-08-28
 tags:
   - kubernetes
   - homelab
