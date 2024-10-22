@@ -102,12 +102,13 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   - Encrypt talosconfig: `sops --encrypt _out/talosconfig > talosconfig.encrypted`
   - Encrypt controlplane.yaml: `sops --encrypt _out/controlplane.yaml > _out/controlplane.encrypted.yaml`
   - Encrypt worker.yaml: `sops --encrypt _out/worker.yaml > _out/worker.encrypted.yaml`
-- **IMPORTANT!** Now's a good time to create `.gitignore` and make sure you exclude `secrets.yaml` and `talosconfig` from your git repo
+- **IMPORTANT!** Now's a good time to create `.gitignore` to make sure you don't commit unencrypted secrets to your repo!
 ```ini
 secrets.yaml
 talosconfig
 controlplane.yaml
 worker.yaml
+kubeconfig
 ```
 - Initialize the git repo: `git init`
 - Make your initial git commit: `git add .`
