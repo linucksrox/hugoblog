@@ -282,7 +282,7 @@ Finally, time to actually install Talos!
   - `cp kubeconfig ~/.kube/config`
   - OR
   - `export KUBECONFIG="/root/whereami/kubeconfig"`
-- Verify you can see the nodes
+- Verify you can see the nodes. It can take a few minutes for Kubernetes to fully bootstrap, even though Talos shows Ready/Healthy in the dashboard.
   - `kubectl get node -o wide`
   ```
   NAME       STATUS   ROLES           AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE         KERNEL-VERSION   CONTAINER-RUNTIME
@@ -293,11 +293,8 @@ Finally, time to actually install Talos!
   taloswk2   Ready    <none>          6m22s   v1.31.1   10.0.50.172   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
   taloswk3   Ready    <none>          6m18s   v1.31.1   10.0.50.173   <none>        Talos (v1.8.1)   6.6.54-talos     containerd://2.0.0-rc.5
   ```
-- In testing I noticed some stuff that's supposed to run on all control plane nodes was only runninn on cp1 and cp3, so check that and reboot each control plane node one at a time to resolve if you see the same issue. You would be looking for `kube-apiserver-[node]`, `kube-controller-manager-[node]`, and `kube-scheduler-[node]`.
+- In testing I noticed some stuff that's supposed to run on all control plane nodes was only running on all control plane nodes. Give it some time and check again. You would be looking for `kube-apiserver-[node]`, `kube-controller-manager-[node]`, and `kube-scheduler-[node]`.
   - `kubectl get po -n kube-system`
-  - `talosctl reboot -n 10.0.50.161`
-  - `talosctl reboot -n 10.0.50.162`
-  - `talosctl reboot -n 10.0.50.163`
 
 ## Test A Workload
 - Create deployment: `kubectl create deploy nginx-test --image nginx --replicas 1`
