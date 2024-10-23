@@ -309,6 +309,68 @@ Finally, time to actually install Talos!
   - `kubectl delete svc nginx-test`
   - `kubectl delete deploy nginx-test`
 
+# Ongoing Maintenance
+
+## Client Certificate Expiration - IMPORTANT!!!
+https://www.talos.dev/v1.8/talos-guides/howto/cert-management/
+
+> Talos Linux automatically manages and rotates all server side certificates for etcd, Kubernetes, and the Talos API. Note however that the kubelet needs to be restarted at least once a year in order for the certificates to be rotated. Any upgrade/reboot of the node will suffice for this effect.
+
+TLDR; Your `talosconfig` and `kubeconfig` files are going to expire 1 year from when they are created. You need to regenerate these files, ideally **before** they expire to avoid issues connecting to the Talos API or the Kubernetes API.
+
+Here's what you need to do. If you get lost, refer to the official Talos documentation linked above for curent instructions.
+
+### talosconfig
+You will know if `talosconfig` is expired if you see this error message when attempting to run `talosctl` commands. Wow that's a lot of errors!!!
+```
+error reading file: rpc errror: code = Unavailable desc = last connection error: connection error: desc = "error reading server preface: remote error: tls: expired certificate"
+```
+
+- At least once a year, regenerate `talosconfig`. You could automate this.
+- Check config details with `talosctl config info`
+  - If your current `talosconfig` is still valid: `talosctl -n CP1 config new talosconfig-reader --roles os:reader --crt-ttl 24h`
+    - Here, `CP1` is the IP of one of your control plane nodes, e.g. `10.0.50.161`
+  - If `talosconfig` has expired:
+    - Generate from `secrets` bundle: `talosctl gen config --with-secrets secrets.yaml --output-types talosconfig -o talosconfig <cluster-name> https://<cluster-endpoint>`
+      - Here, `<cluster-name>` should match what you named your Talos cluster earlier. `<cluster-endpoint>` should be the VIP used for your Talos cluster, e.g. 10.0.50.160. If you didn't elect to use VIP, just pick one of your control plane IPs.
+  - There's a third option in the docs if you need it.
+- If you store `talosconfig` in version control, re-encrypt with SOPS and update. This is totally optional and probably unnecessary since you can generate the config by other means if needed.
+- `mv talosconfig ~/.talos/config`
+- Configure your endpoints and nodes again since they are tied to the config:
+  - `talosctl config endpoint 10.0.50.161 10.0.50.162 10.0.50.163`
+
+### kubeconfig
+You will know if `kubeconfig` is expired if you see this error message when attempting to run `kubectl` commands:
+```
+error: You must be logged in to the server (the server has asked for the client to provide credentials)
+```
+- At least once a year, regenerate `kubeconfig`. This requires you to have a valid `talosconfig`.
+  - Follow the same steps as before to grab `kubeconfig`: `talosctl kubeconfig -n 10.0.50.161 .`
+  - `mv kubeconfig ~/.kube/config`
+
+## Backing Up `etcd` - Recommended!
+I'll be talking about other backups in more depth later on in part 7 with Velero.
+
+`etcd` is special as it's a real time representation of all Kubernetes cluster resources, and it's what the API queries when you run `kubectl` commands. It's the current running state of the cluser. Obviously backing this up is important, because if something goes wrong with it, and you don't have a backup, you will have to rebuild your entire cluster.
+
+I strongly recommend backing up `etcd` separately. Since `etcd` doesn't run as part of the cluster, but rather at the Talos level, you can use `talosctl` to manage and backup the `etcd` database. This actually simplifies things from a Kubernetes administrator perspective, but it's certainly different than the approach you would take from the CKA certification training.
+
+The basic command to snapshot etcd with Talos is this:
+- `talosctl -n 10.0.50.161 etcd snapshot <path>`
+
+I created a small bash script and scheduled it in a cron job to automate this backup, and my bash script looks like this. The resulting file looks like `etcd.snapshot.20241023`:
+```
+#!/bin/bash
+
+TALOSCONFIG="/root/.talos/config"
+PATH="/mnt/talos_backup"
+
+/usr/local/bin/talosctl --talosconfig $TALOSCONFIG -n 10.0.50.161 etcd snapshot $PATH/etcd.snapshot.$(/bin/date +%Y%m%d)
+
+# Delete snapshots older than 30 days
+/usr/bin/find $PATH -mtime +30 -type f -delete
+```
+
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
 
