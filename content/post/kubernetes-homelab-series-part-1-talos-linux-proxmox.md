@@ -89,8 +89,6 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
   creation_rules:
     - path_regex: /*secrets(\.encrypted)?.yaml$
       age: replace-with-your-public-key
-    - path_regex: /*talosconfig(\.encrypted)?$
-      age: replace-with-your-public-key
     - path_regex: /*controlplane(\.encrypted)?.yaml$
       encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
       age: replace-with-your-public-key
@@ -99,7 +97,6 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
       age: replace-with-your-public-key
   ```
   - Encrypt secrets.yaml: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
-  - Encrypt talosconfig: `sops --encrypt _out/talosconfig > talosconfig.encrypted`
   - Encrypt controlplane.yaml: `sops --encrypt _out/controlplane.yaml > _out/controlplane.encrypted.yaml`
   - Encrypt worker.yaml: `sops --encrypt _out/worker.yaml > _out/worker.encrypted.yaml`
 - **IMPORTANT!** Now's a good time to create `.gitignore` to make sure you don't commit unencrypted secrets to your repo!
@@ -262,9 +259,8 @@ Finally, time to actually install Talos!
   -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.172 --patch @patches/kubelet-cert-rotation.patch`
   -  `talosctl patch mc --talosconfig _out/talosconfig -e 10.0.50.161 -n 10.0.50.173 --patch @patches/kubelet-cert-rotation.patch` 
 - Configure talosctl by either copying talosconfig to $HOME/.talos/config or exporting the ENV variable:
-  - `cp _out/talosconfig ~/.talos/config`
-  - OR
-  - `export TALOSCONFIG="_out/talosconfig"`
+  - `mv _out/talosconfig ~/.talos/config`
+  - Or if you want to use ENV variables: `export TALOSCONFIG="_out/talosconfig"`
 - Set endpoints list and nodes list if youi get tired of specifying them every time you run talosctl commands:
   - `talosctl config endpoint 10.0.50.161 10.0.50.162 10.0.50.163`
   - `talosctl config node 10.0.50.161 10.0.50.162 10.0.50.163 10.0.50.171 10.0.50.172 10.0.50.173`
