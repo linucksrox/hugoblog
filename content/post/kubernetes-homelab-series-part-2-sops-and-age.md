@@ -19,7 +19,7 @@ https://github.com/FiloSottile/age
 This is a modern encryption tool which can be used to encrypt whole files, or in our use case used to encrypt parts of YAML files. SOPS supports other encryption options such as AWS KMS, most of which are cloud based. Since we are in a homelab, age seems to be a good option using a strong/modern encryption algorithm. The only other alternative for us homelabbers is PGP, but age is newer so it must be better, right?
 
 # Installation And Setup
-This is a quick walk through of getting SOPS and age installed and how to use SOPS to encrypt/decrypt YAML files. We'll do this for Talos Linux secrets.yaml and for talosconfig so they can be safely stored in a public repo.
+This is a quick walk through of getting SOPS and age installed and how to use SOPS to encrypt/decrypt YAML files. We'll do this for Talos Linux secrets.yaml and for machine configs so they can be safely stored in a public repo.
 
 If you are looking for a video for more depth into SOPS, check out https://www.youtube.com/watch?v=V2PRhxphH2w
 
@@ -49,13 +49,11 @@ I'm just sticking to basic usage and running sops commands manually for now, at 
   - `path_regex` tells sops which files to encrypt if not specified
   - (optional) `encrypted_regex` defines which keys within the file to encrypt - omit this to encrypt all values, otherwise ONLY specific values will be encrypted and others will be left in plain text
   - `age` is the public key used for encryption
-  - Sample `.sops.yaml` file configured for Talos Linux secrets.yaml and talosconfig files:
+  - Sample `.sops.yaml` file configured for Talos Linux secrets.yaml and machine config files:
 ```yaml
   ---
   creation_rules:
     - path_regex: /*secrets(\.encrypted)?.yaml$
-      age: replace-with-your-public-key
-    - path_regex: /*talosconfig(\.encrypted)?$
       age: replace-with-your-public-key
     - path_regex: /*controlplane(\.encrypted)?.yaml$
       encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
@@ -68,11 +66,11 @@ I'm just sticking to basic usage and running sops commands manually for now, at 
 # Encrypting and Decrypting Files
 Now you are ready to actually encrypt/decrypt values in your files. This is a good point to come up with a naming convention if you want to keep separate copies of the decrypted files, because you should make sure you add the decrypted version to .gitignore since the whole point of this is to make sure you don't commit plaintext secrets to a repo anywhere (public or private).
 
-- Encryption: `sops --encrypt secrets.yaml > secrets.encrypted.yaml` or `sops --encrypt talosconfig > talosconfig.encrypted`
-- Decryption: `sops --decrypt secrets.encrypted.yaml > secrets.yaml` or `sops --decrypt talosconfig.encrypted > talosconfig`
+- Encryption: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
+- Decryption: `sops --decrypt secrets.encrypted.yaml > secrets.yaml`
 
 # What about Sealed Secrets?
-Sealed Secrets are a Kubernetes specific solution to encrypting secrets. It's not exactly a replacement for SOPS because it can't be used for anything outside the Kubernetes cluster, and `talosconfig` is a perfect example.
+Sealed Secrets are a Kubernetes specific solution to encrypting secrets. It's not exactly a replacement for SOPS because it can't be used for anything outside the Kubernetes cluster, and Talos `secrets.yaml` is a perfect example.
 
 Sealed Secrets on the other hand are great for other things that you would normally put a Secret in Kubernetes. You can lock down access to the easily read base64 encoded Secrets in the cluster, making sure users interact only with Sealed Secrets which are truly encrypted. Sealed Secrets actually create regular Secrets in the cluster, so you still need to be careful about who has access to Secret resources.
 
