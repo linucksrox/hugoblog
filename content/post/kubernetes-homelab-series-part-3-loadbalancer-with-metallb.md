@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Homelab Series Part 3 - LoadBalancer With MetalLB
+title: Kubernetes Homelab Series Part 3 - LoadBalancer With MetalLB (WIP)
 date: 2024-10-18
 tags:
   - kubernetes
@@ -9,9 +9,11 @@ tags:
 summary: A dive into implementing the LoadBalancer service type without a cloud provider using MetalLB.
 ---
 # What's a LoadBalancer?
+There are a few different types of "Services" in Kubernetes. They provide solutions for different types of network communication between internal cluster resources and externally. Depending on what you need to connect to what, you will use a suitable Service type to provide that connection. I'm specifically not mentioning those other types because this isn't really a tutorial on Kubernetes or what Service type you might need. But you will most likely need/want a LoadBalancer service if you need external traffic to reach within your cluster.
+
 One of the first things you might run into after building a new Kubernetes cluster is that as soon as you go to build something that has a LoadBalancer type service, it's stuck in a Pending status. That's because you don't have a "controller" (is that the right term?) to handle this type of service. It's not included out of the box.
 
-Why not include LoadBalancer out of the box? Because it requires some environment specific configuration, and most importantly in our case that's a pool of IP addresses that are dedicated for this purpose. So how do we tell Kubernetes what IPs it can use for LoadBalancer services? MetalLB - https://metallb.io/
+Why not include LoadBalancer out of the box? Because it requires some environment specific configuration, and most importantly in our case that's a pool of IP addresses that are dedicated for this purpose. So how do we tell Kubernetes what IPs it can use for LoadBalancer services? MetalLB - https://metallb.io/ There's also the difference between ARP and BGP. I don't have a need for BGP in my homelab so I'm just using ARP which is the easier option.
 
 There are other options such as KubeVIP (https://kube-vip.io/), which is also a great project. I'm going to use MetalLB because that's what I have already figured out. You could even use KubeVIP as a control plane load balancer, in addition to MetalLB as a service load balancer. One is dedicated to load balancing the control plane, which means you can set one IP address for all 3 control plane nodes as an interface between `kubectl` and your cluster's API. But what we're focused on here is Service load balancing, so the same thing but for all the stuff you're actually running on your cluster like websites, etc. And eventually this will tie into Ingress and Gateway API, but let's not get too far into the weeds yet.
 
@@ -64,4 +66,10 @@ nginx-loadbalancer   LoadBalancer   10.99.103.170   <pending>     80:30652/TCP  
 - You can delete this and try again later after deploying MetalLB, or leave it and it will automatically get an IP assigned by MetalLB once it's running.
 
 # MetalLB Setup
-Elaborate...
+https://metallb.universe.tf/installation/
+
+The core steps are to make sure your cluster networking will support MetalLB, then install MetalLB, then apply your environment specific configuration. Talos includes flannel which supports MetalLB, and no other networking changes are required before you just start installing. There is no configmap for kube-proxy either, that is already configured in Talos and will work fine.
+
+- Install the MetalLB manifest (check the documentation for the current version): `kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml`
+- Configure your IP address pool for MetalLB to dish out: (tbd)
+- Configure how MetalLB will announce new IPs to your network (Layer 2 ARP in our case): (tbd)
