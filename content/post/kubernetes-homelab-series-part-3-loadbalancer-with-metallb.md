@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Homelab Series Part 3 - LoadBalancer With MetalLB (WIP)
+title: Kubernetes Homelab Series Part 3 - LoadBalancer With MetalLB
 date: 2024-10-18
 tags:
   - kubernetes
