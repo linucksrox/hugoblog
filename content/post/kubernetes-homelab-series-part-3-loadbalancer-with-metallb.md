@@ -72,7 +72,7 @@ The core steps are to make sure your cluster networking will support MetalLB, th
 
 - Install the MetalLB manifest (check the documentation for the current version): `kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml`
 - Configure your IP address pool for MetalLB to use. You can list multiple ranges if you want. See documentation for examples: https://metallb.io/configuration/#defining-the-ips-to-assign-to-the-load-balancer-services
-'''
+```
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
@@ -81,16 +81,16 @@ metadata:
 spec:
   addresses:
   - 10.0.50.64/28
-'''
-  - 'kubectl apply -f metallb-ipaddresspool.yaml'
+```
+  - `kubectl apply -f metallb-ipaddresspool.yaml`
 - Configure how MetalLB will announce new IPs to your network. See documentation for details or use this for layer 2 advertisement: https://metallb.io/configuration/#announce-the-service-ips
-'''
+```
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
   name: metallb-advertise
   namespace: metallb-system
-'''
-  - 'kubectl apply -f metallb-l2advertisement.yaml'
+```
+  - `kubectl apply -f metallb-l2advertisement.yaml`
 
 You should now have MetalLB running and ready to provision IP addresses for your Loadbalancer services. If you ran the demo earlier and left the service up, check again to verify that there is now an IP assigned to the service (see above for details on how to test and verify).
