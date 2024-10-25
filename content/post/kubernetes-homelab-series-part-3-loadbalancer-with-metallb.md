@@ -72,7 +72,7 @@ The core steps are to make sure your cluster networking will support MetalLB, th
 
 - Install the MetalLB manifest (check the documentation for the current version): `kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml`
 - Configure your IP address pool for MetalLB to use. You can list multiple ranges if you want. See documentation for examples: https://metallb.io/configuration/#defining-the-ips-to-assign-to-the-load-balancer-services
-```
+```yaml
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
@@ -84,7 +84,7 @@ spec:
 ```
   - `kubectl apply -f metallb-ipaddresspool.yaml`
 - Configure how MetalLB will announce new IPs to your network. See documentation for details or use this for layer 2 advertisement: https://metallb.io/configuration/#announce-the-service-ips
-```
+```yaml
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
