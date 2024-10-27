@@ -13,7 +13,7 @@ There are a few different types of "Services" in Kubernetes. They provide soluti
 
 One of the first things you might run into after building a new Kubernetes cluster is that as soon as you go to build something that has a LoadBalancer type service, it's stuck in a Pending status. That's because you don't have a "controller" (is that the right term?) to handle this type of service. It's not included out of the box.
 
-Why not include LoadBalancer out of the box? Because it requires some environment specific configuration, and most importantly in our case that's a pool of IP addresses that are dedicated for this purpose. So how do we tell Kubernetes what IPs it can use for LoadBalancer services? MetalLB - https://metallb.io/ There's also the difference between ARP and BGP. I don't have a need for BGP in my homelab so I'm just using ARP which is the easier option.
+Why not include LoadBalancer out of the box? Because it requires some environment specific configuration, and most importantly in our case that's a pool of IP addresses that are dedicated for this purpose. So how do we tell Kubernetes what IPs it can use for LoadBalancer services? MetalLB - https://metallb.io/ There's also the difference between how to advertise provisioned IPs to the rest of the network so that traffic can be routed properly. MetalLB supports two options: layer 2 mode and BGP. I don't have a need for BGP in my homelab so I'm just using layer 2 mode. Layer 2 mode uses ARP on IPv4 networks and NDP on IPv6 networks - https://metallb.io/concepts/
 
 There are other options such as KubeVIP (https://kube-vip.io/), which is also a great project. I'm going to use MetalLB because that's what I have already figured out. You could even use KubeVIP as a control plane load balancer, in addition to MetalLB as a service load balancer. One is dedicated to load balancing the control plane, which means you can set one IP address for all 3 control plane nodes as an interface between `kubectl` and your cluster's API. But what we're focused on here is Service load balancing, so the same thing but for all the stuff you're actually running on your cluster like websites, etc. And eventually this will tie into Ingress and Gateway API, but let's not get too far into the weeds yet.
 
@@ -83,7 +83,7 @@ spec:
   - 10.0.50.64/28
 ```
   - `kubectl apply -f metallb-ipaddresspool.yaml`
-- Configure how MetalLB will announce new IPs to your network. See documentation for details or use this for layer 2 advertisement: https://metallb.io/configuration/#announce-the-service-ips
+- Configure how MetalLB will announce new IPs to your network. See documentation for details or use this for layer 2 mode: https://metallb.io/configuration/#announce-the-service-ips
 ```yaml
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
