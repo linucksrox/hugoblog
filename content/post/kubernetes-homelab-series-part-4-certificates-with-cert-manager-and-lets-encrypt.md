@@ -76,5 +76,48 @@ At this point cert-manager should be running and ready to issue self-signed cert
       name: test-selfsigned
   ```
 Now we are ready to hook up Let's Encrypt so we can get certificates that are signed by a trusted authority. It's always a good idea to start with the staging issuer when testing Let's Encrypt so you don't run into rate limits with their production infrastructure.
-- TODO complete steps to deploy staging issuer and test
+
+I'm using Cloudflare for my DNS nameservers so these steps will be based on that setup.
+
+- Create a Kubernetes secret resource with your Cloudflare API token. This allows cert-manager to add custom _acme-challenge records for domain validation.
+  - In Cloudflare, you can generate a new API token by navigating to your user account > My Profile > API Tokens > Create Token. Make sure token permissions include `All zones - Zone Settings:Read, Zone:Read, DNS:Edit` or you can limit to a specific zone if you have multiple and want to use different API Tokens for different zones.
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: letsencrypt-cloudflare-api-token-secret
+    namespace: cert-manager
+  type: Opaque
+  stringData:
+    api-token: <api-token-goes-here>
+  ```
+- Apply the secret manifest: `ubectl apply -f letsencrypt-cloudflare-api-token-secret.yaml`  
+
+cert-manager has two types of issuers: Issuer and ClusterIssuer. Issuer is used for more fine-grained control, it can be placed within a specific namespace, etc. ClusterIssuer, as the name implies, can be accessed across the whole Kubernetes cluster. Since I'm not getting too complicated, and also want to be able to easily utilize cert-manager from multiple namespaces, I'm using ClusterIssuer. If you wanted to use Issuer, just pick a namespace and the steps are almost identical to this.
+
+- Create a manifest file for the staging issuer. Update your email address:
+  ```yaml
+  apiVersion: cert-manager.io/v1
+  kind: ClusterIssuer
+  metadata:
+    name: letsencrypt-staging
+  spec:
+    acme:
+      # The ACME server URL
+      server: https://acme-staging-v02.api.letsencrypt.org/directory
+      # Email address used for ACME registration
+      email: mail@example.com
+      # Name of a secret used to store the ACME account private key
+      privateKeySecretRef:
+        name: letsencrypt-staging-issuer-secret
+      # Enable the DNS-01 challenge provider
+      solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: letsencrypt-cloudflare-api-token-secret
+              key: api-token
+  ```
+- Apply the staging issuer: `kubectl apply -f letsencrypt-staging-clusterissuer.yaml`
+- Verify your issuer: `kubectl get ClusterIssuer`
 - TODO complete steps to deploy production issuer and test
