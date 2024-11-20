@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: true
-title: Kubernetes Homelab Series Part 6 - Ingress Controllers With Traefik
+title: Kubernetes Homelab Series Part 5 - Ingress Controllers With Traefik
 date: 2024-08-28
 tags:
   - kubernetes
