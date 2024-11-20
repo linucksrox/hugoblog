@@ -27,8 +27,8 @@ A valid question you might ask, and I've asked myself, is why would I consider u
 - Native support for HTTP/3 - it seems to be more on the cutting edge, supporting new technologies faster than NGINX. I know - newer isn't always better, just look at Debian. But for my homelab, newer is almost always better :)
 - Middleware - more features readily available such as IP whitelisting, WAF options, etc. that you can easily plug into routes for additional functionality
 
-## Why Not NGINX Or Something Else?
-No real reason. I like the Traefik project and it does what I need, so I will continue using it for now :)
+## Why Not NGINX Or Kong Or Something Else?
+No real reason. I like the Traefik project and it does what I need in my homelab, so I will continue using it for now :)
 
 # Installation/Setup
 https://doc.traefik.io/traefik/getting-started/install-traefik/#use-the-helm-chart
