@@ -51,4 +51,8 @@ Anyway, here's how to deploy the debug container.
     ```
 - Deploy the pod: `kubectl apply -f debug-pod.yaml`
 - Drop into a shell inside the container: `kubectl exec -it debugpod -n kube-system -- /bin/sh`
-- Get to work :) For example, check this democratic-csi issue for what I did from here to test nvmeof mounts: https://github.com/democratic-csi/democratic-csi/issues/418
+- Do something useful. In my case, I wanted to check if a pod running in this cluster can reach out to Cloudflare and Google DNS servers so:
+  - Install telnet: `apk add --update busybox-extras`
+  - `telnet 1.1.1.1 53` - Ctrl+C, then e to exit
+  - `telnet 8.8.8.8 53` - Ctrl+C, then e to exit
+- Whatever else you want to test :) For example, check this democratic-csi issue for what I did from here to test nvmeof mounts: https://github.com/democratic-csi/democratic-csi/issues/418
