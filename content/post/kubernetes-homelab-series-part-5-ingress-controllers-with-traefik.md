@@ -34,7 +34,11 @@ No real reason. I like the Traefik project and it does what I need, so I will co
 f
 
 # What About Gateway API?
-This is the successor to ingress controllers. While they require more effort up front, if you are building new things the recommendation is to use Gateway API going forward as far as I understand. They are more flexible and solve some problems that Ingress Controllers suffered from (I don't know what any of those are, but I will research and talk about it).
+This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
 
-# Gateway API Installation/Setup - And Migrating From Ingress
-f
+I have read that Gateway API is the successor to ingress controllers. The official FAQ says that Gateway API will not replace Ingress, so we are safe to continue using them (https://gateway-api.sigs.k8s.io/faq/#will-gateway-api-replace-the-ingress-api). There is no need to use Gateway API if all you need is Ingress.
+
+Gateway API solves some inherent limitations with Ingress, primarily the fact that Ingress is Layer 7 only.
+
+## Gateway API Installation/Setup - And Migrating From Ingress
+How to migrate from Ingress to Gateway API: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/
