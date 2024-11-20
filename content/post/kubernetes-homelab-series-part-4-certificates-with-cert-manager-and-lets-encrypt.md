@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Homelab Series Part 4 - Certificates With cert-manager and Let's Encrypt (WIP)
+title: Kubernetes Homelab Series Part 4 - Certificates With cert-manager and Let's Encrypt
 date: 2024-11-19
 tags:
   - kubernetes
@@ -149,8 +149,8 @@ spec:
     name: letsencrypt-staging
 ```
 - Apply the Certificate manifest: `kubectl apply -f letsencrypt-staging-certificate.yaml`
-- Be patient. This can sometimes be quick, but sometimes can take a while. My most recent attempt took 38 minutes (see Troubleshooting section below to dive into what's happening during the process).
 - Check the Certificate is ready: `kubectl get certificate` - this will show Ready=False until it's fully issued
+- Be patient. This can sometimes be quick, but sometimes can take a while. My most recent attempt took 38 minutes (see Troubleshooting section below to dive into what's happening during the process).
 
 Once you get a certificate issued using the staging issuer, you are ready to move to production!
 
@@ -183,6 +183,26 @@ Follow the same steps as in Staging, but using the production ACME URL and proba
 - Apply the staging issuer: `kubectl apply -f letsencrypt-production-clusterissuer.yaml`
 - Verify your ClusterIssuer exists (or Issuer if that's what you're using): `kubectl get clusterissuer`
 
+## Request A Real (Production) Certificate From Let's Encrypt
+This is exactly the same as for staging, except we make the request from the production ClusterIssuer (the last line in the yaml file says which ClusterIssuer to use).
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: letsencrypt-production-certificate
+  namespace: default
+spec:
+  dnsNames:
+    - justkidding.example.com
+  secretName: letsencrypt-production-cert-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-production
+```
+- Apply the Certificate manifest: `kubectl apply -f letsencrypt-production-certificate.yaml`
+- Check the Certificate is ready: `kubectl get certificate` - this will show Ready=False until it's fully issued
+- Be patient. This can sometimes be quick, but sometimes can take a while depending on a lot of factors. See Troubleshooting below for some tips.
+
 # Troubleshooting Certificate Requests
 - Definitive guide: https://cert-manager.io/docs/troubleshooting/
   - Also for Let's Encrypt: https://cert-manager.io/docs/troubleshooting/acme/
@@ -199,3 +219,6 @@ Follow the same steps as in Staging, but using the production ACME URL and proba
   - Find the pod name: `kubectl get po -n cert-manager`
   - `kubectl logs cert-manager-556766675f-pt123 -n cert-manager`
 - See cert-manager issue for more discussion: https://github.com/cert-manager/cert-manager/issues/5917
+
+# What About Ingress?
+I'll revisit this topic after we get to Ingress Controllers (using Traefik) and how to get certificates from Let's Encrypt. It's significantly easier than this, and since we already have this production ClusterIssuer in place, you basically just add a line in your Ingress resource to use this ClusterIssuer to attach a certificate and cert-manager does the rest!
