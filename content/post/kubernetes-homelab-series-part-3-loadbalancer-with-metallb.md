@@ -20,48 +20,48 @@ There are other options such as KubeVIP (https://kube-vip.io/), which is also a 
 ## See For Yourself
 If you want to see the behavior wen you create a LoadBalancer service without something that implements this type of service such as MetalLB, follow along. The symptom is that instead of getting an IP assigned, you will see the EXTERNAL-IP "stuck" as `<pending>`. 
 
-- Save this as `test-lb-svc.yaml` and then run `kubectl apply -f test-lb-svc.yaml`. This creates a deployment running 2 replicas of nginx, then creates a LoadBalancer service in front of it. 
+- Save this as `test-lb-svc.yaml` and then run `kubectl apply -f test-lb-svc.yaml`. This creates a deployment running 2 replicas of `whoami` (which is a simple web server that shows you some details about the connection provided by Traefik), then creates a LoadBalancer service in front of it. 
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-deployment
+  name: whoami-deployment
   labels:
-    app: nginx
+    app: whoami
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: nginx
+      app: whoami
   template:
     metadata:
       labels:
-        app: nginx
+        app: whoami
     spec:
       containers:
-      - name: nginx
-        image: nginx:latest
+      - name: whoami
+        image: traefik/whoami:latest
         ports:
         - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-loadbalancer
+  name: whoami-loadbalancer
 spec:
   type: LoadBalancer
   selector:
-    app: nginx
+    app: whoami
   ports:
   - protocol: TCP
     port: 80
     targetPort: 80
 ```
-- Check the service status with `kubectl get svc` and look at the EXTERNAL-IP for the `nginx-loadbalancer` service. Notice the `<pending>` instead of an actual IP address:
+- Check the service status with `kubectl get svc` and look at the EXTERNAL-IP for the `whoami-loadbalancer` service. Notice the `<pending>` instead of an actual IP address:
 ```
 NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
 kubernetes           ClusterIP      10.96.0.1       <none>        443/TCP        40h
-nginx-loadbalancer   LoadBalancer   10.99.103.170   <pending>     80:30652/TCP   3s
+whoami-loadbalancer   LoadBalancer   10.99.103.170   <pending>     80:30652/TCP   3s
 ```
 - You can delete this and try again later after deploying MetalLB, or leave it and it will automatically get an IP assigned by MetalLB once it's running.
 
@@ -93,4 +93,24 @@ metadata:
 ```
   - `kubectl apply -f metallb-l2advertisement.yaml`
 
-You should now have MetalLB running and ready to provision IP addresses for your Loadbalancer services. If you ran the demo earlier and left the service up, check again to verify that there is now an IP assigned to the service (see above for details on how to test and verify).
+You should now have MetalLB running and ready to provision IP addresses for your Loadbalancer services. If you ran the demo earlier and left the service up, check again to verify that there is now an IP assigned to the `whoami-loadbalancer` service. Navigate to that IP in the browser (HTTP only) to verify you can see the page.
+
+For example, I'm seeing something like this:
+```
+Hostname: whoami-deployment-1a2b3c4d5e-hxx4g
+IP: 127.0.0.1
+IP: ::1
+IP: 10.244.4.8
+IP: fe80::10fe:20ff:fe43:68de
+RemoteAddr: 10.244.5.0:20130
+GET / HTTP/1.1
+Host: 10.0.50.180
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en
+Cache-Control: max-age=0
+Connection: keep-alive
+Sec-Gpc: 1
+Upgrade-Insecure-Requests: 1
+```
