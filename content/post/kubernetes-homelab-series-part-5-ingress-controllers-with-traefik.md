@@ -31,7 +31,9 @@ A valid question you might ask, and I've asked myself, is why would I consider u
 No real reason. I like the Traefik project and it does what I need, so I will continue using it for now :)
 
 # Installation/Setup
-f
+https://doc.traefik.io/traefik/getting-started/install-traefik/#use-the-helm-chart
+
+
 
 # What About Gateway API?
 This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
