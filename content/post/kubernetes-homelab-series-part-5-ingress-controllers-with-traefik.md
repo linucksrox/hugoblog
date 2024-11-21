@@ -148,7 +148,19 @@ extraObjects:
 ## HTTP Redirect To HTTPS
 This is another common thing that most people probably do. You can do this on a per-service basis, or configure Traefik to automatically redirect by default, with the possibility of overriding this on a per-service basis. Let's go with the most common scenario and make this the default behavior.
 
-- 
+https://doc.traefik.io/traefik/routing/entrypoints/#redirection
+
+I'm confused about the mismatch between the values.yaml file and the documentation. In values.yaml there's a field called `redirectTo` that expects an object. I worked out that it requires a `port` and possibly can take another field named `permanent` (true/false). However, when I upgraded the helm release with these values it didn't seem to have any effect. [The documentation](https://doc.traefik.io/traefik/routing/entrypoints/#redirection), on the other hand, talks about a structure that looks like `entryPoints.web.http.redirections.entryPoint.[to|scheme|permanent|priority]`. Since that's how it's configured everywhere else, why not use the same structure in values.yaml???
+
+We can (and should?) ignore `redirectTo` and just go right to `additionalArguments` instead, using the familiar syntax in the docs:
+```yaml
+additionalArguments:
+  - "--entrypoints.web.http.redirections.entryPoint.to=:443"
+  - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+  - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+```
+
+Note the fact that I used `:443` to redirect to, instead of the entryPoint **name** since using `websecure` here will actually cause it to redirect to port 8443. I'm not sure if that's a bug or not in the Helm chart, but this still works and makes sense.
 
 ## Other Options
 Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
