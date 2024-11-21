@@ -27,11 +27,11 @@ If you're still with me and want to apply using the Helm chart, follow along!
 
 - Make sure you have Helm version 3 or later: https://helm.sh/docs/intro/install/
 - Add the helm repo:
-  ```
+  ```sh
   helm repo add jetstack https://charts.jetstack.io --force-update
   ```
 - Install the Helm chart. Note the `extraArgs` for DNS nameserver settings:
-  ```
+  ```sh
   helm install \
     cert-manager jetstack/cert-manager \
     --namespace cert-manager \
