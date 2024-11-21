@@ -83,13 +83,6 @@ Another consideration when deploying Traefik is whether you want to use a custom
 OR do it all in a single step by adding `--create-namespace`
 - `helm install traefik traefik/traefik -f values.yaml -n traefik --create-namespace`
 
-## Other Options
-Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
-
-Specifically I noticed the persistence section in the values.yaml file, but that only pertains to storing certificates acquired directly through Traefik. I would just recommend ignoring that option and sticking with cert-manager.
-
-Traefik provides some examples of common use cases which might also be helpful: https://github.com/traefik/traefik-helm-chart/blob/master/EXAMPLES.md
-
 ## Verify Your Deployment (or DaemonSet)
 - Vanilla install: `kubectl get deploy`
   ```
@@ -152,6 +145,15 @@ extraObjects:
 ```
 - Apply the config: `helm upgrade --reuse-values -n traefik -f dashboard-basicauth.yaml traefik traefik/traefik`
 
+## Other Options
+Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
+
+Specifically I noticed the persistence section in the values.yaml file, but that only pertains to storing certificates acquired directly through Traefik. I would just recommend ignoring that option and sticking with cert-manager.
+
+Traefik provides some examples of common use cases which might also be helpful: https://github.com/traefik/traefik-helm-chart/blob/master/EXAMPLES.md
+
+Beyond all of that, if you need to configure custom entryPoints (say you need ingress on a weird port like 4567), read the Traefik docs, make the change in the Helm values and run the upgrade. I might come back later and add a section explaining this in more detail, but for now I just want to mention it's a possibility. I've used it for the GitLab container registry among other things.
+
 ## Changed Your Mind After Installing Or Just Need To Upgrade?
 This is basic Helm stuff, but basically just update your values and use the same command as before except replacing install with upgrade.
 - Update values.yaml
@@ -174,5 +176,9 @@ I have read that Gateway API is the successor to ingress controllers. The offici
 
 Gateway API solves some inherent limitations with Ingress, primarily the fact that Ingress is Layer 7 only.
 
-## Gateway API Installation/Setup - And Migrating From Ingress
-How to migrate from Ingress to Gateway API: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/
+## Gateway API Tutorial?
+Nah.
+
+We would need a separate tutorial on Gateway API, so I don't even try to begin here. The examples from above mention that you even have to enable it specifically in the Traefik installation before using it: https://github.com/traefik/traefik-helm-chart/blob/master/EXAMPLES.md#use-kubernetes-gateway-api
+
+Also - How to migrate from Ingress to Gateway API: https://gateway-api.sigs.k8s.io/guides/migrating-from-ingress/
