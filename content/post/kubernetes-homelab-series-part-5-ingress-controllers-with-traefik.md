@@ -145,6 +145,23 @@ extraObjects:
 ```
 - Apply the config: `helm upgrade --reuse-values -n traefik -f dashboard-basicauth.yaml traefik traefik/traefik`
 
+## HTTP Redirect To HTTPS
+This is another common thing that most people probably do. You can do this on a per-service basis, or configure Traefik to automatically redirect by default, with the possibility of overriding this on a per-service basis. Let's go with the most common scenario and make this the default behavior.
+
+https://doc.traefik.io/traefik/routing/entrypoints/#redirection
+
+I'm confused about the mismatch between the values.yaml file and the documentation. In values.yaml there's a field called `redirectTo` that expects an object. I worked out that it requires a `port` and possibly can take another field named `permanent` (true/false). However, when I upgraded the helm release with these values it didn't seem to have any effect. [The documentation](https://doc.traefik.io/traefik/routing/entrypoints/#redirection), on the other hand, talks about a structure that looks like `entryPoints.web.http.redirections.entryPoint.[to|scheme|permanent|priority]`. Since that's how it's configured everywhere else, why not use the same structure in values.yaml???
+
+We can (and should?) ignore `redirectTo` and just go right to `additionalArguments` instead, using the familiar syntax in the docs:
+```yaml
+additionalArguments:
+  - "--entrypoints.web.http.redirections.entryPoint.to=:443"
+  - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+  - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+```
+
+Note the fact that I used `:443` to redirect to, instead of the entryPoint **name** since using `websecure` here will actually cause it to redirect to port 8443. I'm not sure if that's a bug or not in the Helm chart, but this still works and makes sense.
+
 ## Other Options
 Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
 
@@ -167,7 +184,78 @@ https://helm.sh/docs/helm/helm_upgrade/
 Always read release notes before upgrading! Sometimes there is more to it than just running the Helm upgrade command. See https://github.com/traefik/traefik-helm-chart?tab=readme-ov-file#upgrading for more details around CRDs and other considerations.
 
 # Testing Ingress
-TODO
+Finally, the easy part. Deploy something, then deploy an Ingress resource, and test. Let's try it.
+
+## Deployment
+Create a test deployment with 2 replicas. Traefik provides a utility called "whoami" which is helpful. This deployment also includes a Service (defaults to type ClusterIP) which is needed before deploying an Ingress resource.
+- Create `whoami-deployment.yaml`:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami-deployment
+spec:
+  selector:
+    matchLabels:
+      app: whoami
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - image: traefik/whoami:latest
+        name: whoami
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whoami-svc
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: whoami
+```
+- Create the deployment: `kubectl apply -f whoami-deployment.yaml`
+- Verify: `k get deploy`
+
+## Ingress
+This is a super basic Ingress resource which can be useful for testing. It includes two annotations:
+- One for cert-manager to issue a certificate from the letsencrypt-staging ClusterIssuer for the hostname specified under Ingress.spec.tls.hosts. If you had used an Issuer instead of ClusterIssuer, you would need to change that line to `cert-manager.io/issuer: "letsencrypt-staging"`
+- One to specify which entryPoints Traefik should route traffic on. This can be a single entrypoint, or a comma separated list like `web,websecure` - see https://doc.traefik.io/traefik/routing/providers/kubernetes-ingress/#on-ingress
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whoami-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - whoami.example.com
+    secretName: whoami-example-tls
+  rules:
+  - host: whoami.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: whoami-svc
+            port:
+              number: 80
+```
 
 # What About Gateway API?
 This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
