@@ -88,6 +88,8 @@ Some of the options you might notice depend on persistent storage. Just be sure 
 
 Specifically I noticed the persistence section in the values.yaml file, but that only pertains to storing certificates acquired directly through Traefik. I would just recommend ignoring that option and sticking with cert-manager.
 
+Traefik provides some examples of common use cases which might also be helpful: https://github.com/traefik/traefik-helm-chart/blob/master/EXAMPLES.md
+
 ## Verify Your Deployment (or DaemonSet)
 - Vanilla install: `kubectl get deploy`
   ```
@@ -105,7 +107,52 @@ Specifically I noticed the persistence section in the values.yaml file, but that
   traefik   3         3         3       3             3           <none>          12s
   ```
 
-## Changed Your Mind After Installing?
+## Traefik Dashboard
+Traefik has a cool dashboard showing some details about routes, middlewares, services, and other stuff. It's all read-only, but also nice to look at and sometimes helpful in troubleshooting why a route isn't working as expected or what exactly it's routing to. But you have to enable access to it, and consider what type of security you want to have in place for Dashboard access.
+
+They don't recommend enabling the dashboard in production, but if you do, at least secure it. The easiest way to expose but also keep somewhat secure is using basic authentication. Sounds good enough for me, let's try it out!
+
+https://github.com/traefik/traefik-helm-chart/blob/master/EXAMPLES.md#publish-and-protect-traefik-dashboard-with-basic-auth
+
+- You can throw this in its own yaml file and apply this specific config to the existing installation. Let's call this `dashboard-basicauth.yaml`:
+  - You'll need a DNS record pointing the host in the matchRule to the IP address on Traefik's LoadBalancer service.
+  - Using websecure without specifying TLS options will result in a self-signed certificate and you'll get a warning in the browser.
+  - Changing these things is beyond the scope of this tutorial - this is where I draw the line :)
+```yaml
+# Create an IngressRoute for the dashboard
+ingressRoute:
+  dashboard:
+    enabled: true
+    # Custom match rule with host domain
+    matchRule: Host(`traefik-dashboard.example.com`)
+    entryPoints: ["websecure"]
+    # Add custom middlewares : authentication and redirection
+    middlewares:
+      - name: traefik-dashboard-auth
+
+# Create the custom middlewares used by the IngressRoute dashboard (can also be created in another way).
+# /!\ Yes, you need to replace "changeme" password with a better one. /!\
+extraObjects:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: traefik-dashboard-auth-secret
+    type: kubernetes.io/basic-auth
+    stringData:
+      username: admin
+      password: changeme
+
+  - apiVersion: traefik.io/v1alpha1
+    kind: Middleware
+    metadata:
+      name: traefik-dashboard-auth
+    spec:
+      basicAuth:
+        secret: traefik-dashboard-auth-secret
+```
+- Apply the config: `helm upgrade --reuse-values -n traefik -f dashboard-basicauth.yaml traefik traefik/traefik`
+
+## Changed Your Mind After Installing Or Just Need To Upgrade?
 This is basic Helm stuff, but basically just update your values and use the same command as before except replacing install with upgrade.
 - Update values.yaml
 - Upgrade Helm chart: `helm upgrade -n traefik -f values.yaml traefik traefik/traefik`
@@ -113,6 +160,9 @@ This is basic Helm stuff, but basically just update your values and use the same
 It almost feels like you just type "traefik traefik traefik" over again a few times, but slightly more nuanced. See the Helm docs for more details.
 
 https://helm.sh/docs/helm/helm_upgrade/
+
+## Traefik Version Upgrade
+Always read release notes before upgrading! Sometimes there is more to it than just running the Helm upgrade command. See https://github.com/traefik/traefik-helm-chart?tab=readme-ov-file#upgrading for more details around CRDs and other considerations.
 
 # Testing Ingress
 TODO
