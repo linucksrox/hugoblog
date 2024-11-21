@@ -24,31 +24,31 @@ On the other hand, I just needed to test manually mounting NVMe over TCP when de
 Anyway, here's how to deploy the debug container.
 
 - Write a new file `debugpod.yaml` and replace [nodename] with the name of the specific node you want this deployed to in your cluster. Optionally change the image if you don't want to use Alpine. This is my go-to default because of how small and fast it is, and installing packages with APK is about as fast as it gets.
-    ```yaml
-    apiVersion: v1
-    kind: Pod
-    metadata:
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
     name: debugpod
     namespace: kube-system
-    spec:
+  spec:
     hostPID: true
     containers:
     - name: debugcontainer
-        image: alpine:3.20
-        stdin: true
-        tty: true
-        securityContext:
+      image: alpine:3.20
+      stdin: true
+      tty: true
+      securityContext:
         privileged: true
-        volumeMounts:
-        - name: dev-mount
+      volumeMounts:
+      - name: dev-mount
         mountPath: /dev
     volumes:
     - name: dev-mount
-        hostPath:
+      hostPath:
         path: /dev
     nodeSelector:
-        kubernetes.io/hostname: [nodename]
-    ```
+      kubernetes.io/hostname: [nodename]
+  ```
 - Deploy the pod: `kubectl apply -f debug-pod.yaml`
 - Drop into a shell inside the container: `kubectl exec -it debugpod -n kube-system -- /bin/sh`
 - Do something useful. In my case, I wanted to check if a pod running in this cluster can reach out to Cloudflare and Google DNS servers so:
