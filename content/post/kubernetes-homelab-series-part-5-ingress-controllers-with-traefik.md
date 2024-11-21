@@ -10,11 +10,12 @@ tags:
   - traefik
 summary: A look into building an ingress controller and the purpose behind it.
 ---
-# What Is Ingress?
+# What Is Ingress and Ingress Controller?
 Ingress is a way to expose your applications running in Kubernetes to something outside the cluster. It's like a reverse proxy for Kubernetes. It defines how traffic is routed from the point that it hits the cluster, specifically the ingress controller, to the running pod. You might already know about the different Kubernetes service types such as ClusterIP, NodePort and LoadBalancer, but this takes it to another level that can handle TLS termination and advanced routing rules, among other nice features, depending on which Ingress Controller you pick. That determines exactly which features are available.
 
-# What's An Ingress Controller?
 An ingress controller is the software that contains the actual logic to implement Ingress rules and functionality. These can vary depending on the ingress controller you pick.
+
+The awesome thing about this component is that it deploys a LoadBalancer type service, and if you used MetalLB or kube-vip, that means you get a virtual IP dynamically assigned to one of your ingress controller replicas. That means if the pod goes down that's running the ingress controller (assuming you have more than 1 replica or use a DaemonSet) then the IP automatically moves to another replica. In other words, between MetalLB and Traefik (or insert your tool of choice for either), you get highly available Ingress to your Kubernetes cluster with no manual effort. Pretty nifty!
 
 ## What About NGINX?
 I feel like I should mention that one of the most widely known ingress controllers is nginx. Before you go down that rabbit hole, there are 2 different ingress controllers based on nginx. One used to be called `nginx-ingress` which was/is the official open source nginx ingress controller (now it's `kubernetes-ingress`: https://github.com/nginxinc/kubernetes-ingress), and maintained by the engineers at NGINX. Hard to go wrong there. The other popular option is `ingress-nginx` which is the community maintained, NGINX supported project. It's been a while since I tried either one, but I hear good things about ingress-nginx because there's a large community behind it and it should be easier to find answers if you have questions. If you need something more production ready (and have your heart set on NGINX), then maybe consider `kubernetes-ingress`.
