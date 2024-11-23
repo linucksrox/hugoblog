@@ -152,7 +152,7 @@ extraObjects:
 Note that the ingressRoute you set up in this config will NOT appear in your cluster as an Ingress type resource. So if you run `kubectl get ingress -A` you won't find it and can't verify it that way. It's an internal ingress route that Traefik uses.
 
 ## HTTP Redirect To HTTPS
-This is another common thing that most people probably do. You can do this on a per-service basis, or configure Traefik to automatically redirect by default, with the possibility of overriding this on a per-service basis. Let's go with the most common scenario and make this the default behavior.
+This is another common thing that most people probably do. You can do this on a per-service basis, or configure Traefik to automatically redirect HTTP to HTTPS for everything. In that case, if you happen to have something that you don't want redirected, you would need to create another entrypoint and use a different port besides 80.
 
 https://doc.traefik.io/traefik/routing/entrypoints/#redirection
 
@@ -200,7 +200,7 @@ Always read release notes before upgrading! Sometimes there is more to it than j
 - Dashboard: Yes
   - I like having access to this in my homelab, but I will protect it with basic auth just as a best practice to secure it in some way.
 - HTTP Permanent Redirect: True
-  - I believe you CAN override this on a specific service, but by default I want Traefik to redirect to HTTPS for everything. Since I have unlimited free certificates through cert-manager, TLS is no problem.
+  - I don't have any special use cases for HTTP now, but if needed I would just create a new entrypoint on a different port if something needed to be non-TLS.
 
 ## Write values.yaml
 - `values.yaml` ONLY needs to contain what you're changing, and defaults will be used automatically. So KISS and don't include default values.
