@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: Kubernetes Homelab Series Part 5 - Ingress Controllers With Traefik (WIP)
-date: 2024-11-21
+date: 2024-11-23
 tags:
   - kubernetes
   - homelab
@@ -39,14 +39,18 @@ You can install the helm chart with no extra options and it will "just work." Th
 https://doc.traefik.io/traefik/getting-started/install-traefik/#use-the-helm-chart
 
 ## Vanilla Installation
-```sh
-helm repo add traefik https://traefik.github.io/charts
-helm repo update
-helm install traefik traefik/traefik
-```
+- For any helm installation, always start by adding the helm repo:
+  - `helm repo add traefik https://traefik.github.io/charts`
+  - `helm repo update`
+- Vanilla Installation:
+  - `helm install traefik traefik/traefik`
+
+You can start deploying Ingress resources. But keep reading to understand some of the ingress controller options and why you might consider changing them.
 
 ## Deployment Vs. DaemonSet
-By default the Helm chart creates a Deployment with 1 replica, based on the [values.yml file](https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml). You could scale this up to 3 replicas if you're looking for something more highly available, or you could consinder a DaemonSet where there will always be one Traefik instance on each worker node to handle routing.
+By default the Helm chart creates a Deployment with 1 replica, based on the [values.yml file](https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml). You could scale this up to 3 replicas if you're looking for something more highly available, or you could consinder a DaemonSet where there will always be one Traefik instance on each worker node to handle routing. Keep in mind with a DaemonSet that if you ever scale up the number of worker nodes, that will also scale up the number of total Ingress Controller pods.
+
+If you wanted to do something a little more elaborate like only run 3 replicas, but make sure they never run on the same node as each other (3 different physical nodes), you would need to get into some node affinity rules that I won't explain here because I haven't done that (yet).
 
 When customizing Helm charts, I tend to prefer downloading the values.yaml file, customizing it, then deploying using the custom values file. That way I can store that in version control and not have to think about messy JSON stuff in my shell commands.
 - Download values file: `helm show values traefik/traefik > values.yaml`
@@ -118,7 +122,7 @@ ingressRoute:
     enabled: true
     # Custom match rule with host domain
     matchRule: Host(`traefik-dashboard.example.com`)
-    entryPoints: ["websecure"]
+    entryPoints: ["web","websecure"]
     # Add custom middlewares : authentication and redirection
     middlewares:
       - name: traefik-dashboard-auth
@@ -145,6 +149,8 @@ extraObjects:
 ```
 - Apply the config: `helm upgrade --reuse-values -n traefik -f dashboard-basicauth.yaml traefik traefik/traefik`
 
+Note that the ingressRoute you set up in this config will NOT appear in your cluster as an Ingress type resource. So if you run `kubectl get ingress -A` you won't find it and can't verify it that way. It's an internal ingress route that Traefik uses.
+
 ## HTTP Redirect To HTTPS
 This is another common thing that most people probably do. You can do this on a per-service basis, or configure Traefik to automatically redirect by default, with the possibility of overriding this on a per-service basis. Let's go with the most common scenario and make this the default behavior.
 
@@ -161,6 +167,8 @@ additionalArguments:
 ```
 
 Note the fact that I used `:443` to redirect to, instead of the entryPoint **name** since using `websecure` here will actually cause it to redirect to port 8443. I'm not sure if that's a bug or not in the Helm chart, but this still works and makes sense.
+
+And in case you're not familiar, "permanent" just means the difference between a normal redirect (HTTP 302) and permanent redirect (HTTP 301) which determines which HTTP response is used.
 
 ## Other Options
 Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
@@ -183,45 +191,98 @@ https://helm.sh/docs/helm/helm_upgrade/
 ## Traefik Version Upgrade
 Always read release notes before upgrading! Sometimes there is more to it than just running the Helm upgrade command. See https://github.com/traefik/traefik-helm-chart?tab=readme-ov-file#upgrading for more details around CRDs and other considerations.
 
+# TLDR; Deploy Using Options I'm Using
+- Deployment: `Deployment` with 2 replicas
+  - I don't want to run too many replicas with a DaemonSet if I scale up the number of workers.
+  - This still helps me if a pod crashes, there is still another replica running while the other pod gets recycled.
+- Namespace: `traefik`
+  - I'm trying to follow best practices and use namespaces for different things
+- Dashboard: Yes
+  - I like having access to this in my homelab, but I will protect it with basic auth just as a best practice to secure it in some way.
+- HTTP Permanent Redirect: True
+  - I believe you CAN override this on a specific service, but by default I want Traefik to redirect to HTTPS for everything. Since I have unlimited free certificates through cert-manager, TLS is no problem.
+
+## Write values.yaml
+- `values.yaml` ONLY needs to contain what you're changing, and defaults will be used automatically. So KISS and don't include default values.
+  ```yaml
+  # Deployment with 2 replicas
+  deployment:
+    replicas: 2
+  
+  # Dashboard with basic auth
+  ingressRoute:
+    dashboard:
+      enabled: true
+      matchRule: Host(`traefik-dashboard.example.com`)
+      entryPoints: ["web","websecure"]
+      middlewares:
+        - name: traefik-dashboard-auth
+  extraObjects:
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: traefik-dashboard-auth-secret
+      type: kubernetes.io/basic-auth
+      stringData:
+        # Change the password PLEASE!!!
+        username: admin
+        password: changeme
+    - apiVersion: traefik.io/v1alpha1
+      kind: Middleware
+      metadata:
+        name: traefik-dashboard-auth
+      spec:
+        basicAuth:
+          secret: traefik-dashboard-auth-secret
+  
+  # HTTP permanent redirect
+  additionalArguments:
+    - "--entrypoints.web.http.redirections.entryPoint.to=:443"
+    - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+    - "--entrypoints.web.http.redirections.entryPoint.permanent=true"
+  ```
+- Deploy using one-size-fits-all command:
+  - `helm upgrade --install -n traefik --create-namespace -f values.yaml traefik traefik/traefik`
+
 # Testing Ingress
 Finally, the easy part. Deploy something, then deploy an Ingress resource, and test. Let's try it.
 
 ## Deployment
 Create a test deployment with 2 replicas. Traefik provides a utility called "whoami" which is helpful. This deployment also includes a Service (defaults to type ClusterIP) which is needed before deploying an Ingress resource.
 - Create `whoami-deployment.yaml`:
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: whoami-deployment
-spec:
-  selector:
-    matchLabels:
-      app: whoami
-  replicas: 2
-  template:
-    metadata:
-      labels:
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: whoami-deployment
+  spec:
+    selector:
+      matchLabels:
         app: whoami
-    spec:
-      containers:
-      - image: traefik/whoami:latest
-        name: whoami
-        ports:
-        - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: whoami-svc
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-  selector:
-    app: whoami
-```
+    replicas: 2
+    template:
+      metadata:
+        labels:
+          app: whoami
+      spec:
+        containers:
+        - image: traefik/whoami:latest
+          name: whoami
+          ports:
+          - containerPort: 80
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: whoami-svc
+  spec:
+    ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+    selector:
+      app: whoami
+  ```
 - Create the deployment: `kubectl apply -f whoami-deployment.yaml`
 - Verify: `k get deploy`
 
@@ -230,32 +291,37 @@ This is a super basic Ingress resource which can be useful for testing. It inclu
 - One for cert-manager to issue a certificate from the letsencrypt-staging ClusterIssuer for the hostname specified under Ingress.spec.tls.hosts. If you had used an Issuer instead of ClusterIssuer, you would need to change that line to `cert-manager.io/issuer: "letsencrypt-staging"`
 - One to specify which entryPoints Traefik should route traffic on. This can be a single entrypoint, or a comma separated list like `web,websecure` - see https://doc.traefik.io/traefik/routing/providers/kubernetes-ingress/#on-ingress
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: whoami-ingress
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-staging"
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-spec:
-  ingressClassName: traefik
-  tls:
-  - hosts:
-    - whoami.example.com
-    secretName: whoami-example-tls
-  rules:
-  - host: whoami.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: whoami-svc
-            port:
-              number: 80
-```
+- Create `whoami-ingress.yaml` and update host in both places, and cluster issuer if yours has a different name:
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: whoami-ingress
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  spec:
+    ingressClassName: traefik
+    tls:
+    - hosts:
+      - whoami.example.com
+      secretName: whoami-example-tls
+    rules:
+    - host: whoami.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: whoami-svc
+              port:
+                number: 80
+  ```
+- Verify: `kubectl get ingress`
+- Test
+  - Update DNS or your local hosts file to point your host (whoami.example.com) to the IP address of Traefik's LoadBalancer service (`kubectl get svc -n traefik`)
+  - Navigate to whoami.example.com in the browser. If you test too soon, you will get the self signed cert from Traefik. If you wait long enough and are still using the staging certificate issuer, you will still have to click through the warning message but it should say it's issued by Let's Encrypt Staging. If you use a production issuer, this should be secure with no warnings.
 
 # What About Gateway API?
 This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
