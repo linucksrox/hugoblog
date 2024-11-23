@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: Kubernetes Homelab Series Part 5 - Ingress Controllers With Traefik (WIP)
-date: 2024-11-21
+date: 2024-11-23
 tags:
   - kubernetes
   - homelab
@@ -250,39 +250,39 @@ Finally, the easy part. Deploy something, then deploy an Ingress resource, and t
 ## Deployment
 Create a test deployment with 2 replicas. Traefik provides a utility called "whoami" which is helpful. This deployment also includes a Service (defaults to type ClusterIP) which is needed before deploying an Ingress resource.
 - Create `whoami-deployment.yaml`:
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: whoami-deployment
-spec:
-  selector:
-    matchLabels:
-      app: whoami
-  replicas: 2
-  template:
-    metadata:
-      labels:
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: whoami-deployment
+  spec:
+    selector:
+      matchLabels:
         app: whoami
-    spec:
-      containers:
-      - image: traefik/whoami:latest
-        name: whoami
-        ports:
-        - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: whoami-svc
-spec:
-  ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-  selector:
-    app: whoami
-```
+    replicas: 2
+    template:
+      metadata:
+        labels:
+          app: whoami
+      spec:
+        containers:
+        - image: traefik/whoami:latest
+          name: whoami
+          ports:
+          - containerPort: 80
+  ---
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: whoami-svc
+  spec:
+    ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+    selector:
+      app: whoami
+  ```
 - Create the deployment: `kubectl apply -f whoami-deployment.yaml`
 - Verify: `k get deploy`
 
@@ -291,32 +291,37 @@ This is a super basic Ingress resource which can be useful for testing. It inclu
 - One for cert-manager to issue a certificate from the letsencrypt-staging ClusterIssuer for the hostname specified under Ingress.spec.tls.hosts. If you had used an Issuer instead of ClusterIssuer, you would need to change that line to `cert-manager.io/issuer: "letsencrypt-staging"`
 - One to specify which entryPoints Traefik should route traffic on. This can be a single entrypoint, or a comma separated list like `web,websecure` - see https://doc.traefik.io/traefik/routing/providers/kubernetes-ingress/#on-ingress
 
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: whoami-ingress
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-staging"
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-spec:
-  ingressClassName: traefik
-  tls:
-  - hosts:
-    - whoami.example.com
-    secretName: whoami-example-tls
-  rules:
-  - host: whoami.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: whoami-svc
-            port:
-              number: 80
-```
+- Create `whoami-ingress.yaml` and update host in both places, and cluster issuer if yours has a different name:
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    name: whoami-ingress
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  spec:
+    ingressClassName: traefik
+    tls:
+    - hosts:
+      - whoami.example.com
+      secretName: whoami-example-tls
+    rules:
+    - host: whoami.example.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: whoami-svc
+              port:
+                number: 80
+  ```
+- Verify: `kubectl get ingress`
+- Test
+  - Update DNS or your local hosts file to point your host (whoami.example.com) to the IP address of Traefik's LoadBalancer service (`kubectl get svc -n traefik`)
+  - Navigate to whoami.example.com in the browser. If you test too soon, you will get the self signed cert from Traefik. If you wait long enough and are still using the staging certificate issuer, you will still have to click through the warning message but it should say it's issued by Let's Encrypt Staging. If you use a production issuer, this should be secure with no warnings.
 
 # What About Gateway API?
 This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
