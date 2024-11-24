@@ -11,7 +11,17 @@ summary: Diving into the depths of Kubernetes storage, then walking through
   using democratic-csi for NFS and NVMe-oF with Talos Linux.
 ---
 # What's So Hard About Storage?
-Everything. Too many questions to answer. How many disks do you have? Do you want/need replicated storage? What are your storage capacity requirements? What are your speed requirements? How many disks do you have? How fast is the networking between them if they are on separate nodes? And on and on.
+There are several questions to answer when deciding how to handle storage for Kubernetes.
+- How many disks do you have?
+- Do you want/need replicated storage?
+- What are your storage capacity requirements?
+- What are your performance requirements?
+- Do you need dynamically provisioned storage or will you be doing it manually?
+- NFS or iSCSI or NVMe-OF?
+- How will you back up your data?
+- Do you need snapshots?
+- Does your storage need to be highly available?
+- Does it need to be accessible from any node in the cluster, or are you good with node local storage?
 
 Ultimately it's not actually hard, it's just complex if you want to achieve anything like you get with EBS volumes in AWS, but in your homelab. Here's how I always try to approach complex problems: start as simple as possible, make it work, then add complexity only as needed.
 
@@ -32,6 +42,7 @@ Spin up the VM, format the disk, ZFS, etc. and you're ready to go. In my case, t
 # Instructions
 
 ## TrueNAS Setup In Proxmox
+This isn't intended to be a TrueNAS tutorial, so I'll just list the steps at a high level. Basically, get a TrueNAS server running and then proceed.
 - Pass a disk (or HBA controller) to a VM in Proxmox
 - Install TrueNAS Scale
 - Set up your zpool
