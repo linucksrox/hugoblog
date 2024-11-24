@@ -8,7 +8,7 @@ tags:
   - homelab
   - storage
 summary: Diving into the depths of Kubernetes storage, then walking through
-  using democratic-csi for NFS and NVMe-oF with Talos Linux.
+  using democratic-csi for iSCSI and NFS with Talos Linux.
 ---
 # What's So Hard About Storage?
 There are several questions to answer when deciding how to handle storage for Kubernetes.
