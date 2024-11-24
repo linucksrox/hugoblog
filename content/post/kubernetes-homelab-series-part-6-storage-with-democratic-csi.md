@@ -55,14 +55,14 @@ This is a straightforward CSI provider that focuses on dynamically provisioned s
 You will install a separate Helm chart for each provisioner, and you can actually run multiple at the same time, which is what I will be doing with both NFS and iSCSI. This is helpful since NFS is great for RWX volumes (if you actually have a use case for that), while iSCSI is good for single application RWO volumes.
 
 ## Dynamic iSCSI Provisioner With freenas-api-iscsi
-My single 2TB disk is in a pool named `nvme2tb`. I created a dataset in TrueNAS called `iscsi`. Those may vary in your case, so pay attention to the configuration and update those values according to your environment.
+My single 2TB disk is in a pool named `nvme2tb`. I created a dataset in TrueNAS named `iscsi`. Those may vary in your case, so pay attention to the configuration and update those values according to your environment.
 
 Don't forget, your Talos installation needs to include the iscsi extension or the nodes won't be able to connect to TrueNAS.
 
 - Create a dataset named `iscsi`
 - Make sure Block (iSCSI) Shares Targets is running, and click Configure
 - Save the defaults for Target Global Configuration
-- Add a portal on 0.0.0.0:3260
+- Add a portal on 0.0.0.0:3260 named `k8s-democratic-csi`
 - Add an Initiator Group, Allow all initiators, and name it something like `k8s-talos`
 - Create a Target named `donotdelete` and alias `donotdelete`, then add iSCSI group selecting the Portal and Initiator Group you just created. This prevents TrueNAS from deleting the Initiator Group if you're testing and you delete the one and only PV.
 - Make note of the portal ID and the Initiator Group ID and update these values in the file `freenas-api-iscsi.yaml` if needed
@@ -142,8 +142,13 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
       iscsiDirHostPath: /usr/local/etc/iscsi
       iscsiDirHostPathType: ""
   ```
+- Since we are using snapshots, you also need to install a snapshot controller such as https://github.com/democratic-csi/charts/tree/master/stable/snapshot-controller
+  - You can skip this step if you disable snapshots in your YAML file
+  - `helm upgrade --install --namespace kube-system --create-namespace snapshot-controller democratic-csi/snapshot-controller`
+  - `kubectl -n kube-system logs -f -l app=snapshot-controller`
 - Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-iscsi.yaml truenas-iscsi democratic-csi/democratic-csi`
-- Test: TODO how to test
+- Verify: `kubectl get all -n democratic-csi`
+  - You're looking to see that everything is fully running. It may take several minutes to spin up.
 
 ## Dynamic NFS Provisioner With freenas-api-nfs
 TODO: Deploy `freenas-api-nfs` using API key and test
