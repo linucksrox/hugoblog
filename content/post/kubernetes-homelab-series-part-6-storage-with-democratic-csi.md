@@ -17,7 +17,7 @@ There are several questions to answer when deciding how to handle storage for Ku
 - What are your storage capacity requirements?
 - What are your performance requirements?
 - Do you need dynamically provisioned storage or will you be doing it manually?
-- NFS or iSCSI or NVMe-OF?
+- NFS or iSCSI or NVMe-oF?
 - How will you back up your data?
 - Do you need snapshots?
 - Does your storage need to be highly available?
@@ -39,30 +39,116 @@ In Proxmox, I'm passing the disk itself directly to TrueNAS VM. You **should** p
 
 Spin up the VM, format the disk, ZFS, etc. and you're ready to go. In my case, this is on the Kubernetes VLAN and assigned a static IP. Originally I had a second NIC attached to the primary VLAN but this caused some weird web UI performance issues so I removed that one.
 
-# Instructions
-
-## TrueNAS Setup In Proxmox
+# TrueNAS Setup In Proxmox
 This isn't intended to be a TrueNAS tutorial, so I'll just list the steps at a high level. Basically, get a TrueNAS server running and then proceed.
 - Pass a disk (or HBA controller) to a VM in Proxmox
 - Install TrueNAS Scale
-- Set up your zpool
-- Generate an API Key
+- Create a zpool
+- Generate an API Key - in the top right corner go to Admin > API Keys
 - Make sure the network is accessible from your Kubernetes cluster
 
-## CSI Driver democratic-csi
+# Install democratic-csi With TrueNAS
 https://github.com/democratic-csi/democratic-csi
 
-This is a straightforward CSI provider that focuses on dynamically provisioned storage from TrueNAS or generic ZFS on Linux backends. Protocols include NFS, iSCSI, and NVMe-oF. I'll show you how to use the API variation and do NFS and iSCSI shares.
+This is a straightforward CSI provider that focuses on dynamically provisioned storage from TrueNAS or generic ZFS on Linux backends. Protocols include NFS, iSCSI, and NVMe-oF. I'll show you how to use the API variation and do NFS and iSCSI shares, plus talk about almost getting NVMe-oF working.
 
-- TODO how to install democratic-csi
+You will install a separate Helm chart for each provisioner, and you can actually run multiple at the same time, which is what I will be doing with both NFS and iSCSI. This is helpful since NFS is great for RWX volumes (if you actually have a use case for that), while iSCSI is good for single application RWO volumes.
 
-## Dynamic NFS Storage For Kubernetes
-TODO: how to set up TrueNAS and integrate democratic-csi with the truenas-api provisioner. Also, how to test.
+## Dynamic iSCSI Provisioner With freenas-api-iscsi
+My single 2TB disk is in a pool named `nvme2tb`. I created a dataset in TrueNAS called `iscsi`. Those may vary in your case, so pay attention to the configuration and update those values according to your environment.
 
-## Dynamic iSCSI Storage For Kubernetes
-TODO: how to set up TrueNAS and integrate democratic-csi with the truenas-api provisioner. Also, how to test.
+Don't forget, your Talos installation needs to include the iscsi extension or the nodes won't be able to connect to TrueNAS.
 
-## Dynamic NVMe-oF Storage For Kubernetes
+- Create a dataset named `iscsi`
+- Make sure Block (iSCSI) Shares Targets is running, and click Configure
+- Save the defaults for Target Global Configuration
+- Add a portal on 0.0.0.0:3260
+- Add an Initiator Group, Allow all initiators, and name it something like `k8s-talos`
+- Create a Target named `donotdelete` and alias `donotdelete`, then add iSCSI group selecting the Portal and Initiator Group you just created. This prevents TrueNAS from deleting the Initiator Group if you're testing and you delete the one and only PV.
+- Make note of the portal ID and the Initiator Group ID and update these values in the file `freenas-api-iscsi.yaml` if needed
+  - During testing, the manually created Initiator Group was getting deleted whenever deleting the last PV. This appears to be a bug in TrueNAS somewhere according to https://github.com/democratic-csi/democratic-csi/issues/412. Essentially TrueNAS deletes the Initiator Group automatically if an associated Target is deleted and no others exist. If you followed the instructions and created a manual Target this won't be an issue :)
+- Create the democratic-csi namespace: `kubectl create ns democratic-csi`
+- Make that namespace privileged: `kubectl label --overwrite namespace democratic-csi pod-security.kubernetes.io/enforce=privileged`
+- Create `freenas-api-iscsi.yaml` and update `apiKey`, `host`, `targetPortal`, `datasetParentName`, and `detachedSnapshotsDatasetParentName`
+  ```yaml
+  driver:
+    config:
+      driver: freenas-api-iscsi
+      httpConnection:
+        protocol: https
+        apiKey: [your-truenas-api-key-here]
+        host: 10.0.50.99
+        port: 443
+        allowInsecure: true
+      zfs:
+        datasetParentName: nvme2tb/iscsi/volumes
+        detachedSnapshotsDatasetParentName: nvme2tb/iscsi/snapshots
+        zvolCompression:
+        zvolDedup:
+        zvolEnableReservation: false
+        zvolBlockSize:
+      iscsi:
+        targetPortal: "10.0.50.99:3260"
+        targetPortals: []
+        interface:
+        namePrefix: csi-
+        nameSuffix: "-talos"
+        targetGroups:
+          - targetGroupPortalGroup: 1
+            targetGroupInitiatorGroup: 5
+            targetGroupAuthType: None
+            targetGroupAuthGroup:
+        extentInsecureTpc: true
+        extentXenCompat: false
+        extentDisablePhysicalBlocksize: true
+        extentBlocksize: 512
+        extentRpm: "SSD"
+        extentAvailThreshold: 0
+  
+  csiDriver:
+    # should be globally unique for a given cluster
+    name: "org.democratic-csi.freenas-api-iscsi"
+  
+  storageClasses:
+    - name: truenas-iscsi
+      defaultClass: true
+      reclaimPolicy: Delete
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: ext4
+        detachedVolumesFromSnapshots: "false"
+      mountOptions: []
+      secrets:
+        provisioner-secret:
+        controller-publish-secret:
+        node-stage-secret:
+        node-publish-secret:
+        controller-expand-secret:
+  
+  volumeSnapshotClasses:
+    - name: truenas-iscsi
+      parameters:
+        detachedSnapshots: "true"
+
+  node:
+    hostPID: true
+    driver:
+      extraEnv:
+        - name: ISCSIADM_HOST_STRATEGY
+          value: nsenter
+        - name: ISCSIADM_HOST_PATH
+          value: /usr/local/sbin/iscsiadm
+      iscsiDirHostPath: /usr/local/etc/iscsi
+      iscsiDirHostPathType: ""
+  ```
+- Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-iscsi.yaml truenas-iscsi democratic-csi/democratic-csi`
+- Test: TODO how to test
+
+## Dynamic NFS Provisioner With freenas-api-nfs
+TODO: Deploy `freenas-api-nfs` using API key and test
+
+### Dynamic NVMe-oF Storage For Kubernetes (unfinished)
 TODO: Talk about my attempt to get this working and where I left off. It works when manually mounting on a regular Linux box, but not using the provisioner. Probably an issue with my configuration, but I can't find anyone to help me debug.
 
 # What About Other Options?
