@@ -148,7 +148,7 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
   - `kubectl -n kube-system logs -f -l app=snapshot-controller`
 - Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-iscsi.yaml truenas-iscsi democratic-csi/democratic-csi`
 - Verify:
-  - You're looking to see that everything is fully running. It may take several minutes to spin up.
+  - You're looking to see that everything is fully running. It may take a minute to spin up.
   - `kubectl get all -n democratic-csi`
   - `kubectl get storageclasses` or `kubectl get sc`
 
@@ -215,7 +215,131 @@ This test pod uses a small Alpine image and writes to a log file every second. T
 - Delete PVC: `kubectl delete -f test-pvc-truenas-iscsi.yaml`
 
 ## Dynamic NFS Provisioner With freenas-api-nfs
-TODO: Deploy `freenas-api-nfs` using API key and test
+This one's a little simpler than iSCSI since support is built into Talos automatically, and there's less setup on the TrueNAS side.
+
+- Create a dataset named `nfs`
+- Create the democratic-csi namespace: `kubectl create ns democratic-csi`
+- Make that namespace privileged: `kubectl label --overwrite namespace democratic-csi pod-security.kubernetes.io/enforce=privileged`
+- Create `freenas-api-nfs.yaml` and update `apiKey`, `host`, `shareHost`, `datasetParentName`, and `detachedSnapshotsDatasetParentName`
+  ```yaml
+  driver:
+    config:
+      driver: freenas-api-nfs
+      httpConnection:
+        protocol: https
+        apiKey: [api-key-goes-here]
+        host: 10.0.50.99
+        port: 443
+        allowInsecure: true
+      zfs:
+        datasetParentName: nvme2tb/nfs
+        detachedSnapshotsDatasetParentName: nvme2tb/nfs/snaps
+        datasetEnableQuotas: true
+        datasetEnableReservation: false
+        datasetPermissionsMode: "0777"
+        datasetPermissionsUser: 0
+        datasetPermissionsGroup: 0
+      nfs:
+        shareCommentTemplate: "{{ parameters.[csi.storage.k8s.io/pvc/namespace] }}-{{ parameters.[csi.storage.k8s.io/pvc/name] }}"
+        shareHost: 10.0.50.99
+        shareAlldirs: false
+        shareAllowedHosts: []
+        shareAllowedNetworks: []
+        shareMaprootUser: root
+        shareMaprootGroup: root
+        shareMapallUser: ""
+        shareMapallGroup: ""
+  
+  csiDriver:
+    # should be globally unique for a given cluster
+    name: "org.democratic-csi.freenas-api-nfs"
+  
+  storageClasses:
+    - name: truenas-nfs
+      defaultClass: false
+      reclaimPolicy: Delete
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: nfs
+      mountOptions:
+        - noatime
+        - nfsvers=4
+  
+  volumeSnapshotClasses:
+    - name: truenas
+  ```
+- Since we are using snapshots, you also need to install a snapshot controller such as https://github.com/democratic-csi/charts/tree/master/stable/snapshot-controller
+  - You can skip this step if you disable snapshots in your YAML file
+  - `helm upgrade --install --namespace kube-system --create-namespace snapshot-controller democratic-csi/snapshot-controller`
+  - `kubectl -n kube-system logs -f -l app=snapshot-controller`
+- Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-nfs.yaml truenas-nfs democratic-csi/democratic-csi`
+- Verify:
+  - You're looking to see that everything is fully running. It may take a minute to spin up.
+  - `kubectl get all -n democratic-csi`
+  - `kubectl get storageclasses` or `kubectl get sc`
+
+### Test - Deploy A PVC
+- Test with a simple PVC, targeting our new `truenas-nfs` storage class, `test-pvc-truenas-nfs.yaml`:
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: testpvc
+  spec:
+    storageClassName: truenas-nfs
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+  ```
+  - `kubectl apply -f test-pvc-truenas-nfs.yaml`
+  - Be patient, this can take a minute to provision the new block device on TrueNAS and get everything mapped in Kubernetes.
+  - Check the Persistent Volume itself: `kubectl get pv`
+    - Looking for a new entry here
+  - Check the Persistent Volume Claim: `kubectl get pvc`
+    - Looking for status Bound to the newly created PV
+  - If you need to investigate, next look at `kubectl describe pvc` and `kubectl describe pv`, or go look in the TrueNAS UI to see if a new disk has been created
+
+### Test - Deploy A Pod/Deployment
+At this point there should be a PV and PVC, but they are not actually connected to a pod yet. The moment a pod claims a PVC, that's when the actual node that the pod is running on will mount the NFS share.
+
+This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
+
+- Create `pod-using-testpvc.yaml`:
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: testlogger
+  spec:
+      containers:
+      - name: testlogger
+        image: alpine:3.20
+        command: ["/bin/ash"]
+        args: ["-c", "while true; do echo \"$(date) - test log\" >> /mnt/test.log && sleep 1; done"]
+        volumeMounts:
+        - name: testvol
+          mountPath: /mnt
+      volumes:
+      - name: testvol
+        persistentVolumeClaim:
+          claimName: testpvc
+  #    nodeSelector:
+  #      kubernetes.io/hostname: taloswk1
+  ```
+- Deploy: `kubectl apply -f pod-using-testpvc.yaml`
+- Verify `kubectl get pod`
+  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger | grep Node:`
+- Validate data is being written to the PVC:
+  - Exec into the pod: `kubectl exec -it testlogger -- /bin/sh`
+  - Look at the file: `cat /mnt/test.log`
+  - Show line count: `wc -l /mnt/test.log`
+
+### Test - Cleanup
+- `kubectl delete -f pod-using-testpvc.yaml`
+- `kubectl delete -f test-pvc-truenas-nfs.yaml`
 
 ### Dynamic NVMe-oF Storage For Kubernetes (unfinished)
 TODO: Talk about my attempt to get this working and where I left off. It works when manually mounting on a regular Linux box, but not using the provisioner. Probably an issue with my configuration, but I can't find anyone to help me debug.
