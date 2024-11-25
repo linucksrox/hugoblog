@@ -52,7 +52,7 @@ https://github.com/democratic-csi/democratic-csi
 
 This is a straightforward CSI provider that focuses on dynamically provisioned storage from TrueNAS or generic ZFS on Linux backends. Protocols include NFS, iSCSI, and NVMe-oF. I'll show you how to use the API variation and do NFS and iSCSI shares, plus talk about almost getting NVMe-oF working.
 
-You will install a separate Helm chart for each provisioner, and you can actually run multiple at the same time, which is what I will be doing with both NFS and iSCSI. This is helpful since NFS is great for RWX volumes (if you actually have a use case for that), while iSCSI is good for single application RWO volumes.
+You will install a separate Helm chart for each provisioner, and you can actually run multiple at the same time, which is what I will be doing with both NFS and iSCSI. This is helpful since NFS even supports RWX volumes (if you actually have a use case for that), while iSCSI is a good default for RWO volumes.
 
 ## Dynamic iSCSI Provisioner With freenas-api-iscsi
 My single 2TB disk is in a pool named `nvme2tb`. I created a dataset in TrueNAS named `iscsi`. Those may vary in your case, so pay attention to the configuration and update those values according to your environment.
@@ -69,7 +69,7 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
   - During testing, the manually created Initiator Group was getting deleted whenever deleting the last PV. This appears to be a bug in TrueNAS somewhere according to https://github.com/democratic-csi/democratic-csi/issues/412. Essentially TrueNAS deletes the Initiator Group automatically if an associated Target is deleted and no others exist. If you followed the instructions and created a manual Target this won't be an issue :)
 - Create the democratic-csi namespace: `kubectl create ns democratic-csi`
 - Make that namespace privileged: `kubectl label --overwrite namespace democratic-csi pod-security.kubernetes.io/enforce=privileged`
-- Create `freenas-api-iscsi.yaml` and update `apiKey`, `host`, `targetPortal`, `datasetParentName`, and `detachedSnapshotsDatasetParentName`
+- Create `freenas-api-iscsi.yaml` and update `apiKey`, `host`, `targetPortal`, `datasetParentName`, and `detachedSnapshotsDatasetParentName`. Other common considerations in storage class YAML config are `storageClasses.defaultClass` (true/false, there can only be one), and `storageClasses.reclaimPolicy` (Delete/Retain) and if you set this to Retain, there is less chance that data will be deleted if you delete a pod (for example), but you are also responsible for deleting this manually in TrueNAS if you ever need to.
   ```yaml
   driver:
     config:
@@ -158,7 +158,7 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
   apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
-    name: testpvc
+    name: testpvc-iscsi
   spec:
     storageClassName: truenas-iscsi
     accessModes:
@@ -168,7 +168,7 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
         storage: 5Gi
   ```
   - `kubectl apply -f test-pvc-truenas-iscsi.yaml`
-  - Be patient, this can take a minute to provision the new block device on TrueNAS and get everything mapped in Kubernetes.
+  - Be patient, this can take a minute to provision the new Zvol on TrueNAS (looks something like `nvme2tb/iscsi/volumes/pvc-25e70f84-91c7-4e49-a9f1-e324681a3b7d`) and get everything mapped in Kubernetes.
   - Check the Persistent Volume itself: `kubectl get pv`
     - Looking for a new entry here
   - Check the Persistent Volume Claim: `kubectl get pvc`
@@ -180,15 +180,15 @@ At this point there should be a PV and PVC, but they are not actually connected 
 
 This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
 
-- Create `pod-using-testpvc.yaml`:
+- Create `pod-using-testpvc-iscsi.yaml`:
   ```yaml
   apiVersion: v1
   kind: Pod
   metadata:
-    name: testlogger
+    name: testlogger-iscsi
   spec:
       containers:
-      - name: testlogger
+      - name: testlogger-iscsi
         image: alpine:3.20
         command: ["/bin/ash"]
         args: ["-c", "while true; do echo \"$(date) - test log\" >> /mnt/test.log && sleep 1; done"]
@@ -198,20 +198,20 @@ This test pod uses a small Alpine image and writes to a log file every second. T
       volumes:
       - name: testvol
         persistentVolumeClaim:
-          claimName: testpvc
+          claimName: testpvc-iscsi
   #    nodeSelector:
   #      kubernetes.io/hostname: taloswk1
   ```
-- Deploy: `kubectl apply -f pod-using-testpvc.yaml`
-- Verify `kubectl get pod`
-  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger | grep Node:`
+- Deploy: `kubectl apply -f pod-using-testpvc-iscsi.yaml`
+- Verify `kubectl get po`
+  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger-iscsi | grep Node:`
 - Validate data is being written to the PVC:
-  - Exec into the pod: `kubectl exec -it testlogger -- /bin/sh`
+  - Exec into the pod: `kubectl exec -it testlogger-iscsi -- /bin/sh`
   - Look at the file: `cat /mnt/test.log`
   - Show line count: `wc -l /mnt/test.log`
 
 ### Test - Cleanup
-- Delete pod: `kubectl delete -f pod-using-testpvc.yaml`
+- Delete pod: `kubectl delete -f pod-using-testpvc-iscsi.yaml`
 - Delete PVC: `kubectl delete -f test-pvc-truenas-iscsi.yaml`
 
 ## Dynamic NFS Provisioner With freenas-api-nfs
@@ -285,7 +285,7 @@ This one's a little simpler than iSCSI since support is built into Talos automat
   apiVersion: v1
   kind: PersistentVolumeClaim
   metadata:
-    name: testpvc
+    name: testpvc-nfs
   spec:
     storageClassName: truenas-nfs
     accessModes:
@@ -307,15 +307,15 @@ At this point there should be a PV and PVC, but they are not actually connected 
 
 This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
 
-- Create `pod-using-testpvc.yaml`:
+- Create `pod-using-testpvc-nfs.yaml`:
   ```yaml
   apiVersion: v1
   kind: Pod
   metadata:
-    name: testlogger
+    name: testlogger-nfs
   spec:
       containers:
-      - name: testlogger
+      - name: testlogger-nfs
         image: alpine:3.20
         command: ["/bin/ash"]
         args: ["-c", "while true; do echo \"$(date) - test log\" >> /mnt/test.log && sleep 1; done"]
@@ -325,20 +325,20 @@ This test pod uses a small Alpine image and writes to a log file every second. T
       volumes:
       - name: testvol
         persistentVolumeClaim:
-          claimName: testpvc
+          claimName: testpvc-nfs
   #    nodeSelector:
   #      kubernetes.io/hostname: taloswk1
   ```
-- Deploy: `kubectl apply -f pod-using-testpvc.yaml`
-- Verify `kubectl get pod`
-  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger | grep Node:`
+- Deploy: `kubectl apply -f pod-using-testpvc-nfs.yaml`
+- Verify `kubectl get po`
+  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger-nfs | grep Node:`
 - Validate data is being written to the PVC:
-  - Exec into the pod: `kubectl exec -it testlogger -- /bin/sh`
+  - Exec into the pod: `kubectl exec -it testlogger-nfs -- /bin/sh`
   - Look at the file: `cat /mnt/test.log`
   - Show line count: `wc -l /mnt/test.log`
 
 ### Test - Cleanup
-- `kubectl delete -f pod-using-testpvc.yaml`
+- `kubectl delete -f pod-using-testpvc-nfs.yaml`
 - `kubectl delete -f test-pvc-truenas-nfs.yaml`
 
 ### Dynamic NVMe-oF Storage For Kubernetes (I was unable to make this work)
@@ -346,11 +346,78 @@ I spent some time trying to get this to work. TrueNAS doesn't currently support 
 
 From there, I figured out the configuration needed for democratic-csi `zfs-generic-nvmeof` driver and started testing. I got as far as getting it to provision a new dataset on TrueNAS, create the mount, and create the PV and PVC in the cluster, showing as Bound. However, when I would actually attempt to connect to it from a pod, it would fail. It may have something to do with how democratic-csi does the mount from the node, or otherwise I might have something wrong in my configuration that I can't figure out.
 
+If I could get this working, I might not even bother running a TrueNAS instance and just run some lightweight Linux server to interface between democratic-csi and the disk(s).
+
 Here's some extra details on exactly what I tried:
 - https://github.com/siderolabs/talos/issues/9255
 - https://github.com/democratic-csi/democratic-csi/issues/418
 
 Please help me if you know how to make this work, as I'd much rather be using this than iSCSI :)
+
+Here's my almost working config for reference:
+  ```yaml
+  csiDriver:
+    name: "org.democratic-csi.nvmeof"
+
+  storageClasses:
+    - name: truenas-nvmeof
+      defaultClass: false
+      reclaimPolicy: Delete
+      volumeBindingMode: Immediate
+      allowVolumeExpansion: true
+      parameters:
+        fsType: ext4
+
+      mountOptions: []
+      secrets:
+        provisioner-secret:
+        controller-publish-secret:
+        node-stage-secret:
+        node-publish-secret:
+        controller-expand-secret:
+
+  volumeSnapshotClasses: []
+
+  driver:
+    config:
+      driver: zfs-generic-nvmeof
+      sshConnection:
+        host: 10.0.50.99
+        port: 22
+        username: root
+        privateKey: |
+          -----BEGIN RSA PRIVATE KEY-----
+          REDACTED!
+          -----END RSA PRIVATE KEY-----
+      zfs:
+        datasetParentName: nvme2tb/k8s/nvmeof
+        detachedSnapshotsDatasetParentName: nvme2tb/k8s/nvmeof-snapshots
+
+        zvolCompression:
+        zvolDedup:
+        zvolEnableReservation: false
+        zvolBlocksize: 16K
+
+      nvmeof:
+        transports:
+          - tcp://0.0.0.0:4420
+
+        namePrefix:
+        nameSuffix:
+
+        shareStrategy: "nvmetCli"
+
+        shareStrategyNvmetCli:
+          nvmetcliPath: nvmetcli
+          configIsImportedFilePath: /var/run/nvmet-config-loaded
+          configPath: /etc/nvmet/config.json
+          basename: "nqn.2003-01.org.linux-nvme"
+          ports:
+            - "1"
+          subsystem:
+            attributes:
+              allow_any_host: 1
+  ```
 
 # What About Other Options?
 
