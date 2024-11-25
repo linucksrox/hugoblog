@@ -147,8 +147,68 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
   - `helm upgrade --install --namespace kube-system --create-namespace snapshot-controller democratic-csi/snapshot-controller`
   - `kubectl -n kube-system logs -f -l app=snapshot-controller`
 - Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-iscsi.yaml truenas-iscsi democratic-csi/democratic-csi`
-- Verify: `kubectl get all -n democratic-csi`
+- Verify:
   - You're looking to see that everything is fully running. It may take several minutes to spin up.
+  - `kubectl get all -n democratic-csi`
+  - `kubectl get storageclasses` or `kubectl get sc`
+
+### Test - Deploy A PVC
+- Test with a simple PVC, targeting our new `truenas-iscsi` storage class, `test-pvc-truenas-iscsi.yaml`:
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: testpvc
+  spec:
+    storageClassName: truenas-iscsi
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 5Gi
+  ```
+  - `kubectl apply -f test-pvc-truenas-iscsi.yaml`
+  - Be patient, this can take a minute to provision the new block device on TrueNAS and get everything mapped in Kubernetes.
+  - Check the Persistent Volume itself: `kubectl get pv`
+    - Looking for a new entry here
+  - Check the Persistent Volume Claim: `kubectl get pvc`
+    - Looking for status Bound to the newly created PV
+  - If you need to investigate, next look at `kubectl describe pvc` and `kubectl describe pv`, or go look in the TrueNAS UI to see if a new disk has been created
+
+### Test - Deploy A Pod/Deployment
+At this point there should be a PV and PVC, but they are not actually connected to a pod yet. The moment a pod claims a PVC, that's when the actual node that the pod is running on will mount the iSCSI target, and this is where the `iscsi-utils` extension comes into play in Talos Linux. Let's test to make sure we can actually connect to the PVC from a pod.
+
+This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
+
+- Create `pod-using-testpvc.yaml`:
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: testlogger
+  spec:
+      containers:
+      - name: testlogger
+        image: alpine:3.20
+        command: ["/bin/ash"]
+        args: ["-c", "while true; do echo \"$(date) - test log\" >> /mnt/test.log && sleep 1; done"]
+        volumeMounts:
+        - name: testvol
+          mountPath: /mnt
+      volumes:
+      - name: testvol
+        persistentVolumeClaim:
+          claimName: testpvc
+  #    nodeSelector:
+  #      kubernetes.io/hostname: taloswk1
+  ```
+- Deploy: `kubectl apply -f pod-using-testpvc.yaml`
+- Verify `kubectl get pod`
+  - Check which node it's on with `kubectl get po -o wide` or `kubectl describe po testlogger | grep Node:`
+- Validate data is being written to the PVC:
+  - Exec into the pod: `kubectl exec -it testlogger -- /bin/sh`
+  - Look at the file: `cat /mnt/test.log`
+  - Show line count: `wc -l /mnt/test.log`
 
 ## Dynamic NFS Provisioner With freenas-api-nfs
 TODO: Deploy `freenas-api-nfs` using API key and test
