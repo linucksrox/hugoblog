@@ -210,6 +210,10 @@ This test pod uses a small Alpine image and writes to a log file every second. T
   - Look at the file: `cat /mnt/test.log`
   - Show line count: `wc -l /mnt/test.log`
 
+### Test - Cleanup
+- Delete pod: `kubectl delete -f pod-using-testpvc.yaml`
+- Delete PVC: `kubectl delete -f test-pvc-truenas-iscsi.yaml`
+
 ## Dynamic NFS Provisioner With freenas-api-nfs
 TODO: Deploy `freenas-api-nfs` using API key and test
 
