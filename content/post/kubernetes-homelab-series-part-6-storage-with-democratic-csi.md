@@ -341,7 +341,7 @@ This test pod uses a small Alpine image and writes to a log file every second. T
 - `kubectl delete -f pod-using-testpvc-nfs.yaml`
 - `kubectl delete -f test-pvc-truenas-nfs.yaml`
 
-### Dynamic NVMe-oF Storage For Kubernetes (I was unable to make this work)
+## Dynamic NVMe-oF Storage For Kubernetes (I was unable to make this work)
 I spent some time trying to get this to work. TrueNAS doesn't currently support NVMe-oF through the interface, but since it's just a Linux box you can simply (almost simply) install extra packages needed and configure them as root. After doing that, I tested manually by connecting from another Linux machine to validate that I could indeed mount NVMe over TCP using TrueNAS.
 
 From there, I figured out the configuration needed for democratic-csi `zfs-generic-nvmeof` driver and started testing. I got as far as getting it to provision a new dataset on TrueNAS, create the mount, and create the PV and PVC in the cluster, showing as Bound. However, when I would actually attempt to connect to it from a pod, it would fail. It may have something to do with how democratic-csi does the mount from the node, or otherwise I might have something wrong in my configuration that I can't figure out.
