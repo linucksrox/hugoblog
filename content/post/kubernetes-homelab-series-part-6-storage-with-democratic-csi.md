@@ -1,8 +1,8 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Homelab Series Part 6 - Storage With democratic-csi (WIP)
-date: 2024-11-24
+title: Kubernetes Homelab Series Part 6 - Storage With democratic-csi
+date: 2024-11-25
 tags:
   - kubernetes
   - homelab
@@ -175,7 +175,7 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
     - Looking for status Bound to the newly created PV
   - If you need to investigate, next look at `kubectl describe pvc` and `kubectl describe pv`, or go look in the TrueNAS UI to see if a new disk has been created
 
-### Test - Deploy A Pod/Deployment
+### Test - Deploy A Pod
 At this point there should be a PV and PVC, but they are not actually connected to a pod yet. The moment a pod claims a PVC, that's when the actual node that the pod is running on will mount the iSCSI target, and this is where the `iscsi-utils` extension comes into play in Talos Linux. Let's test to make sure we can actually connect to the PVC from a pod.
 
 This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
@@ -302,7 +302,7 @@ This one's a little simpler than iSCSI since support is built into Talos automat
     - Looking for status Bound to the newly created PV
   - If you need to investigate, next look at `kubectl describe pvc` and `kubectl describe pv`, or go look in the TrueNAS UI to see if a new disk has been created
 
-### Test - Deploy A Pod/Deployment
+### Test - Deploy A Pod
 At this point there should be a PV and PVC, but they are not actually connected to a pod yet. The moment a pod claims a PVC, that's when the actual node that the pod is running on will mount the NFS share.
 
 This test pod uses a small Alpine image and writes to a log file every second. The two lines commented out at the bottom are there in case you want to target a specific node. I would recommend if you're not sure all your Talos Linux nodes are configured properly for iSCSI to target each of them and verify from every pod. You can delete the pod, but preserve the PVC and if you reconnect to the PVC from another pod, even if it's running on another node, it should still contain the same data.
