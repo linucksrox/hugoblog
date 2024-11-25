@@ -370,11 +370,12 @@ PATH="/mnt/talos_backup"
 # Next Steps
 Now you should have a Talos Linux cluster running with each node having its own static IP, along with a VIP for the control plane cluster. You are ready to start installing what I would consider foundational components that will be used to automate tasks for you when deploying actual workloads later on. These include:
 
+- Secret encryption - Sealed Secrets
 - LoadBalancer service - MetalLB
 - Certificate manager - cert-manager
-- CSI driver - democratic-csi
 - Ingress provider - traefik
+- CSI driver - democratic-csi
 - Backups - Velero + etcd backup with talosctl
-- Secret encryption - Sealed Secrets
-- Metrics server
-- Grafana + Loki?
+- Grafana (https://grafana.com/docs/grafana/latest/) + Prometheus (https://prometheus.io/docs/introduction/overview/)
+- Loki + Promtail - https://github.com/grafana/loki
+- Metrics server (https://github.com/kubernetes-sigs/metrics-server) - This is intended for autoscaling, not general monitoring
