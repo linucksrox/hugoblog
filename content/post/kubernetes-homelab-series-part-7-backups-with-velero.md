@@ -59,7 +59,7 @@ I'll walk through installing Velero with some options you might want to consider
 - `kubectl` installed locally
 - Object storage. I'm running MinIO in my lab. You could use MinIO, Ceph, AWS S3, Backblaze B2 (S3 API), or any other object storage you prefer.
 
-## Installing Velero
+## Installing Velero - Client Side
 https://velero.io/docs/v1.15/basic-install/
 
 - Install the `velero` client utility
@@ -72,9 +72,51 @@ https://velero.io/docs/v1.15/basic-install/
   rm -rf velero-$VERSION-linux-amd64.tar.gz
   velero version
   ```
-- Install Velero in the cluster. There are two options, using the Helm chart or using the `velero` utility. I'm installing with the CLI utility:
-  - a
-  - b
+
+## Installing Velero - Server Side
+There are two installation methods, using the Helm chart or using the `velero` utility. Let's use `velero` CLI since the Helm method seems complicated based on what I can find in the docs.
+
+### Using `velero` Utility
+We need to start with an access key for the S3 backup target. I'm using MinIO: https://velero.io/docs/v1.15/contributions/minio/
+- Create a bucket `velero-talos`
+- Create a group `velero-svc`
+- Create a service account user `velero` and add to `velero-svc` group
+- Create a policy `velero-rw`. Raw Policy:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::velero-talos",
+                "arn:aws:s3:::velero-talos/*"
+            ]
+        }
+    ]
+}
+```
+- Assign that policy to the `velero-svc` group
+- Create an access key on the `velero` user
+- Create a file named `minio-access-key.txt`, replacing the values from your access key
+```ini
+[default]
+aws_access_key_id = minio
+aws_secret_access_key = minio123
+```
+  - Decide what you think is best for storing this file or the credentials somewhere  securely. I would suggest using SOPS, but I will leave the implementation up to you.
+- Install:
+  - `velero install --provider aws --secret-file minio-access-key.txt --plugins velero/velero-plugin-for-aws:v1.11.0 --bucket velero --use-volume-snapshots=true --backup-location-config region=us-east-1,s3ForcePathStyle="true",s3Url=http://192.168.1.35:9000`
+    - You may need to update the plugin version and s3URL.
+    - Optionally, set `use-volume-snapshots=false` if you don't want to back up PVs.
+- Verify:
+  - `kubectl get all -n velero`
 
 ## Testing
 ### Manual Backup
