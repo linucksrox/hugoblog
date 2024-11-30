@@ -127,6 +127,12 @@ aws_secret_access_key = minio123
     - Optionally, set `use-volume-snapshots=false` if you don't want to back up PVs.
 - Verify:
   - `kubectl get all -n velero`
+  - `kubectl -n velero get pod -l deploy=velero`
+  - Check logs, in particular to verify that Velero can reach the backup location
+    - `kubectl -n velero logs -l deploy=velero`
+    ```
+    level=info msg="BackupStorageLocations is valid, marking as available"
+    ```
 - Post install:
   - If you are using democratic-csi for snapshots, you also need to add a label on the VolumeSnapshotClass to let Velero know which one to use by default. This must only be set on 1 volumeSnapshotClass
     - `kubectl edit volumesnapshotclass truenas-iscsi`
