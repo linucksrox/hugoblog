@@ -170,6 +170,15 @@ I like to do daily full backups at 7am. TTL is the expiration time for each back
 - Create schedule: `velero schedule create daily-full --schedule "0 7 * * *" --ttl 720h`
 - Verify: `velero get schedules`
 
+### Restore From Scheduled Backup
+- `velero restore create --from-schedule SCHEDULE_NAME`
+
+## Restores In General
+See previous examples for specific restore commands. The basic syntax will be `velero restore create [RESTORE_NAME] [--from-backup BACKUP_NAME | --from-schedule SCHEDULE_NAME] [flags]`
+
+You can restore from a manually created backup or a scheduled backup. You can also restore specific items from a backup, so let's say you just want to restore your secret key to your sealed secrets from a daily-full scheduled backup, you can use flags to specify exactly what from that backup you want to restore. For example:
+- `velero restore create restore-sealed-secret-key --from-schedule daily-full --selector sealedsecrets.bitnami.com/sealed-secrets-key=active`
+
 ## Back Up PVCs Using democratic-csi Snapshots
 If you enabled snapshots in democratic-csi and also enabled snapshos in Velero as described above, then anything you back up with Velero that includes a PVC will be snapshotted. I tested this by deploying a pod/deployment in the default namespace, attached to a test PVC, then ran a Velero backup against it.
 
