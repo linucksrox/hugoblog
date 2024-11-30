@@ -144,11 +144,22 @@ aws_secret_access_key = minio123
       - `velero client config get features`
 
 ## Testing
-### Manual Backup
-### Manual Restore
+### Manual Backup/Restore
+Let's back up the traefik namespace:
+- `velero backup create traefik-backup --include-namespaces traefik`
+- Verify: `velero backup describe traefik-backup`
+  - Looking for Phase: Complete
+- Test a DR scenario:
+  - Blow away the traefik namespace: `kubectl delete ns traefik`
+  - Restore traefik-backup with Velero: `velero restore create --from-backup traefik-backup`
+  - Verify: `kubectl get ns` or `velero restore describe traefik-backup-20241130181633` (get the restore name from the previous restore command)
 
 ## Create A Backup Schedule
 
-## Back Up PVCs
+
+## Back Up PVCs Using democratic-csi Snapshots
+If you enabled snapshots in democratic-csi and also enabled snapshos in Velero as described above, then anything you back up with Velero that includes a PVC will be snapshotted. I tested this by deploying a pod/deployment in the default namespace, attached to a test PVC, then ran a Velero backup against it.
+
+- `velero backup create test-manual-backup` (this backs up everything in the cluster)
 
 ## Kopia
