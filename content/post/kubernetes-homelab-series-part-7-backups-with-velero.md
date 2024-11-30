@@ -76,7 +76,7 @@ https://velero.io/docs/v1.15/basic-install/
 ## Installing Velero - Server Side
 There are two installation methods, using the Helm chart or using the `velero` utility. Let's use `velero` CLI since the Helm method seems complicated based on what I can find in the docs.
 
-### Using `velero` Utility
+### MinIO Setup
 We need to start with an access key for the S3 backup target. I'm using MinIO: https://velero.io/docs/v1.15/contributions/minio/
 - Create a bucket `velero-talos`
 - Create a group `velero-svc`
@@ -111,12 +111,37 @@ aws_access_key_id = minio
 aws_secret_access_key = minio123
 ```
   - Decide what you think is best for storing this file or the credentials somewhere  securely. I would suggest using SOPS, but I will leave the implementation up to you.
+
+### Install Using `velero` Utility
+- Arguments reference:
+  - `--provider` - Use the AWS provider which is also used for any generic S3 object storage, including MinIO
+  - `--secret-file` - Specifies the secrets to use for authentication against the MinIO storage
+  - `--plugins` - Required for Velero to connect to an S3 backend
+  - `--bucket` - specifies the name of the bucket on the S3 backend
+  - `--use-volume-snapshots=true` - Enables volume snapshots
+  - `--backup-location-config` - Configures the connection URL and options for the S3 backend
+  - `--features=EnableCSI` - Enables Velero to use a built in CSI snapshot driver, such as democratic-csi and take snapshots using a volumesnapshotclass. To be clear, Velero would create a volumesnapshot and it would be stored wherever democratic-csi stores snapshots (in our case that's in another dataset on the TrueNAS instance). This is the easy button if you already have CSI snapshots enabled, but the alternative is using Kopia and storing snapshots on the MinIO backend.
 - Install:
-  - `velero install --provider aws --secret-file minio-access-key.txt --plugins velero/velero-plugin-for-aws:v1.11.0 --bucket velero --use-volume-snapshots=true --backup-location-config region=us-east-1,s3ForcePathStyle="true",s3Url=http://192.168.1.35:9000`
+  - `velero install --provider aws --secret-file minio-access-key.txt --plugins velero/velero-plugin-for-aws:v1.11.0 --bucket velero --use-volume-snapshots=true --backup-location-config region=us-east-1,s3ForcePathStyle="true",s3Url=http://192.168.1.35:9000 --features=EnableCSI`
     - You may need to update the plugin version and s3URL.
     - Optionally, set `use-volume-snapshots=false` if you don't want to back up PVs.
 - Verify:
   - `kubectl get all -n velero`
+- Post install:
+  - If you are using democratic-csi for snapshots, you also need to add a label on the VolumeSnapshotClass to let Velero know which one to use by default. This must only be set on 1 volumeSnapshotClass
+    - `kubectl edit volumesnapshotclass truenas-iscsi`
+    ```yaml
+      velero.io/csi-volumesnapshot-class: "true"
+    ```
+  - If you're ADDING this funtionality after you've already installed Velero, you just need to modify the server deployment and also enable on the client: velero.io/csi-volumesnapshot-class: "true"
+    - Server:
+      - `kubectl edit -n velero deploy/velero`
+      ```yaml
+      --features=EnableCSI
+      ```
+    - Client:
+      - `velero client config set features=EnableCSI`
+      - `velero client config get features`
 
 ## Testing
 ### Manual Backup
