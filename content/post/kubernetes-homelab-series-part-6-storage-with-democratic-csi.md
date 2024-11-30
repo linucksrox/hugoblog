@@ -54,6 +54,15 @@ This is a straightforward CSI provider that focuses on dynamically provisioned s
 
 You will install a separate Helm chart for each provisioner, and you can actually run multiple at the same time, which is what I will be doing with both NFS and iSCSI. This is helpful since NFS even supports RWX volumes (if you actually have a use case for that), while iSCSI is a good default for RWO volumes.
 
+## VolumeSnapshot Support
+This is optional, but if you want to utilize volume snapshots (which became GA as of Kubernetes 1.20), you will need to install the CRDs which aren't included with vanilla Talos, along with installing the "snapshotter." This implements Volume Snapshots - https://kubernetes.io/docs/concepts/storage/volume-snapshots/
+
+- Clone repo: `git clone https://github.com/kubernetes-csi/external-snapshotter.git`
+- `cd external-snapshotter`
+- Apply CRDs: ` kubectl kustomize client/config/crd | kubectl create -f -`
+- Install snapshotter into kube-system: `kubectl -n kube-system kustomize deploy/kubernetes/snapshot-controller | kubectl create -f -`
+- Verify: `kubectl get deploy snapshot-controller -n kube-system`
+
 ## Dynamic iSCSI Provisioner With freenas-api-iscsi
 My single 2TB disk is in a pool named `nvme2tb`. I created a dataset in TrueNAS named `iscsi`. Those may vary in your case, so pay attention to the configuration and update those values according to your environment.
 
@@ -142,10 +151,6 @@ Don't forget, your Talos installation needs to include the iscsi extension or th
       iscsiDirHostPath: /usr/local/etc/iscsi
       iscsiDirHostPathType: ""
   ```
-- Since we are using snapshots, you also need to install a snapshot controller such as https://github.com/democratic-csi/charts/tree/master/stable/snapshot-controller
-  - You can skip this step if you disable snapshots in your YAML file
-  - `helm upgrade --install --namespace kube-system --create-namespace snapshot-controller democratic-csi/snapshot-controller`
-  - `kubectl -n kube-system logs -f -l app=snapshot-controller`
 - Deploy: `helm upgrade --install --namespace democratic-csi --values freenas-api-iscsi.yaml truenas-iscsi democratic-csi/democratic-csi`
 - Verify:
   - You're looking to see that everything is fully running. It may take a minute to spin up.
@@ -267,7 +272,7 @@ This one's a little simpler than iSCSI since support is built into Talos automat
         - nfsvers=4
   
   volumeSnapshotClasses:
-    - name: truenas
+    - name: truenas-nfs
   ```
 - Since we are using snapshots, you also need to install a snapshot controller such as https://github.com/democratic-csi/charts/tree/master/stable/snapshot-controller
   - You can skip this step if you disable snapshots in your YAML file
