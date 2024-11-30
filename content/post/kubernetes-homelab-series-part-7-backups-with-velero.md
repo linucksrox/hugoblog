@@ -144,6 +144,8 @@ aws_secret_access_key = minio123
       - `velero client config get features`
 
 ## Testing
+I'll go through a specific example that should work to follow along if you've followed the series up to now. Otherwise, there are some good examples in the docs that you can reference: https://velero.io/docs/v1.15/examples/
+
 ### Manual Backup/Restore
 Let's back up the traefik namespace:
 - `velero backup create traefik-backup --include-namespaces traefik`
@@ -154,12 +156,19 @@ Let's back up the traefik namespace:
   - Restore traefik-backup with Velero: `velero restore create --from-backup traefik-backup`
   - Verify: `kubectl get ns` or `velero restore describe traefik-backup-20241130181633` (get the restore name from the previous restore command)
 
-## Create A Backup Schedule
+Create a full backup: `velero backup create full-20241130` - If you don't specify namespaces, etc. then everything gets backed up.
 
+## Create A Backup Schedule
+I like to do daily full backups at 7am. TTL is the expiration time for each backup created, 720h is 30 days. So I get daily backups that fall off after 30 days.
+
+- Create schedule: `velero schedule create daily-full --schedule "0 7 * * *" --ttl 720h`
+- Verify: `velero get schedules`
 
 ## Back Up PVCs Using democratic-csi Snapshots
 If you enabled snapshots in democratic-csi and also enabled snapshos in Velero as described above, then anything you back up with Velero that includes a PVC will be snapshotted. I tested this by deploying a pod/deployment in the default namespace, attached to a test PVC, then ran a Velero backup against it.
 
-- `velero backup create test-manual-backup` (this backs up everything in the cluster)
+- `velero backup create full-backup`
 
 ## Kopia
+Velero uses Kopia (as a plugin) to copy existing snapshots to your S3 backend. This means that if you're not already creating "regular" snapshots already outside of Velero, you need to have EnableCSI enabled and working already so that a VolumeSnapshot is created, which can then be copied out to S3. In a homelab environment, this may be redundant if your MinIO storage is backed by the same storage you're using for snapshots, but for the sake of completeness I will run through how we can make this work and test it.
+
