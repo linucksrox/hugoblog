@@ -18,6 +18,8 @@ https://github.com/FiloSottile/age
 (Pronounced "ah-gay", it does not rhyme with rage)  
 This is a modern encryption tool which can be used to encrypt whole files, or in our use case used to encrypt parts of YAML files. SOPS supports other encryption options such as AWS KMS, most of which are cloud based. Since we are in a homelab, age seems to be a good option using a strong/modern encryption algorithm. The only other alternative for us homelabbers is PGP, but age is newer so it must be better, right?
 
+I will also mention that you could use AWS KMS which is available on their free tier up to 20,000 requests per month as of today.
+
 # Installation And Setup
 This is a quick walk through of getting SOPS and age installed and how to use SOPS to encrypt/decrypt YAML files. We'll do this for Talos Linux secrets.yaml and for machine configs so they can be safely stored in a public repo.
 
