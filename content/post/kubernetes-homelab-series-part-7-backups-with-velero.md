@@ -170,6 +170,26 @@ I like to do daily full backups at 7am. TTL is the expiration time for each back
 - Create schedule: `velero schedule create daily-full --schedule "0 7 * * *" --ttl 720h`
 - Verify: `velero get schedules`
 
+Alternatively, you can use a manifest to define your backup schedule. You may not want to include certain namespaces in your daily backups since most likely you won't need/want to restore namespaces like `kube-system`, `kube-public`, and `kube-node-lease`. Let's look at defining a backup schedule using a manifest:
+
+- Create the Schedule manifest, `schedule.yaml`:
+  ```yaml
+  apiVersion: velero.io/v1
+  kind: Schedule
+  metadata:
+    name: daily-skipping-system-namespaces
+  spec:
+    schedule: "0 12 * * *"
+    skipImmediately: false
+    template:
+      excludedNamespaces:
+        - kube-public
+        - kube-system
+        - kube-node-lease
+  ```
+- Apply the schedule: `kubectl apply -f schedule.yaml`
+- Verify: `velero get schedules`
+
 ### Restore From Scheduled Backup
 - `velero restore create --from-schedule SCHEDULE_NAME`
 
