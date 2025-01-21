@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Upgrade Talos Linux and Kubernetes (WIP)
+title: Upgrade Talos Linux and Kubernetes
 date: 2025-01-21
 tags:
   - kubernetes
