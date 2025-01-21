@@ -24,7 +24,7 @@ Talos recommends using the `talosctl upgrade-k8s` command which automatically up
 - Check current version: `kubectl get node`
 - Upgrade: `talosctl -n 10.0.50.11 upgrade-k8s --to 1.31.5`
   - You only need to specify a single control plane node, but this will upgrade the whole cluster
-  - You need to choose a real Kubernetes version, and omit the `v` from this command - https://kubernetes.io/releases/
+  - You need to choose a real Kubernetes version - https://kubernetes.io/releases/
   - This will take a while, so try to be patient.
 - Verify version: `kubectl get node`
 - That's it. You are now done.
@@ -50,7 +50,7 @@ Be sure to upgrade one node at a time and check that it's healthy before moving 
 
 In my homelab, I am comfortable blasting through upgrades with a for loop, so my upgrade command looks like this:
 ```bash
-for node in 11 12 13 21 22 23 31 32 33; do talosctl upgrade -n 10.0.50.11 --image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.9.2 --preserve; done
+for node in 11 12 13 21 22 23 31 32 33; do talosctl upgrade -n 10.0.50.$node --image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.9.2 --preserve; done
 ```
 
 Once Nodes have been upgraded, upgrade the `talosctl` client so the version matches the Talos node version.
