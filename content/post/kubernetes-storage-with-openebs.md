@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: Kubernetes Storage - OpenEBS Replicated Storage Mayastor (WIP)
-date: 2025-01-20
+date: 2025-01-21
 tags:
   - kubernetes
   - homelab
@@ -43,8 +43,9 @@ machine:
       - 192.168.1.22
 ```
 - `talosctl patch mc -n 10.0.50.135 --patch @patches/storage1.patch`
-- Apply a patch to set some machine config stuff for OpenEBS which includes hugepages, nodeLabel and specific bind mounts:
-  - Note about bind mounts: the documentation was unclear on which path to use, and I found that both were needed for different components
+- I'm having trouble here with the node name changing, and I have to manually delete the random name from the cluster:
+  - e.g. `kubectl delete node talos-lry-si8`
+- Apply a patch to set some machine config stuff for OpenEBS which includes hugepages, a nodeLabel for where mayastor engine should run, and the `/var/local` bind mount:
 ```yaml
 # ./patches/openebs.patch
 machine:
@@ -52,22 +53,14 @@ machine:
     vm.nr_hugepages: "1024"
   nodeLabels:
     openebs.io/engine: mayastor
-  kubelet:
-    extraMounts:
-      - destination: /var/local
-        type: bind
-        source: /var/local
-        options:
-          - rbind
-          - rshared
-          - rw
-      - destination: /var/openebs/local
-        type: bind
-        source: /var/openebs/local
-        options:
-          - rbind
-          - rshared
-          - rw
+  extraMounts:
+    - destination: /var/local
+      type: bind
+      source: /var/local
+      options:
+        - rbind
+        - rshared
+        - rw
 ```
 - `talosctl patch mc -n 10.0.50.31 --patch @patches/openebs.patch`
 - If you have an additional disk to use with OpenEBS, you'll need to pass it directly to the Talos node VM. I'm using Proxmox
@@ -77,39 +70,35 @@ machine:
     - If you see orange on these settings, you will need to shut down the VM, then power it back on for the changes to apply. Rebooting won't do it.
   - Now that the disk has been added, look for it with talosctl: `talosctl get disks -n 10.0.50.31`
     - In my case I see a disk named `sdb` which is 2.0TB with model "QEMU HARDDISK"
-  - Mount the disk to a bind mount. This requires both .machine.disks and .machine.kubelet.extraMounts sections, and the mount path must start with `/var/` or it won't work.
+  - Mount the disk to be passed to containers with appropriate privileges. This is required for openebs-io-engine to access the extra disk.
   ```yaml
   # ./patches/mount-sdb.patch
   machine:
-    kubelet:
-        extraMounts:
-        - destination: /var/mnt/nvme2tb
-            type: bind
-            source: /var/mnt/nvme2tb
-            options:
-            - rbind
-            - rshared
-            - rw
     disks:
         - device: /dev/sdb
-        partitions:
-            - mountpoint: /var/mnt/nvme2tb
   ```
   - Apply: `talosctl patch mc -n 10.0.50.31 --patch @patches/mount-sdb.patch` - At this point the Talos node will reboot and should come back up healthy in a minute.
   - View the console or check the dashboard with `talosctl dashbord -n 10.0.50.31`
-  - If you see an error about being unable to mount the disk or the partition being the wrong type, etc. you will need to wipe the disk and create a fresh GPT partition OUTSIDE of Talos. Shut down the VM and do this in proxmox with `wipefs /dev/whatever` and then use `fdisk /dev/whatever` > `g` > `w` > `q` (`g` writes a new GPT table, `w` writes to disk and `q` quits). Now power Talos back on and it should do its thing.
+  - If you see an error about being unable to mount the disk or the partition being the wrong type, etc. you will need to wipe the disk and create a fresh GPT partition. As of Talos 1.9.0 this can be done with `talosctl wipe sdb -n 10.0.50.31`, otherwise you would need to do this outside of Talos.
+    - `talosctl wipe disk sdb -n 10.0.50.31` - where `sdb` is the device, you confirmed this right? Confirm using `talosctl get disks -n 10.0.50.31`
+    - Otherwise from Proxmox you could do this: Shut down the VM and do this in proxmox with `wipefs /dev/sdb` and then use `fdisk /dev/sdb` > `g` > `w` (`g` writes a new GPT table, `w` writes to disk). Now power Talos back on and it should do its thing.
+    - Yet another option would be to boot into a different Linux ISO on the VM and use a tool like Gparted. Whatever you like best.
 
-Now repeat the process for any other Talos nodes you need. I have 3, so I'm doing `talos-storage-1`, `talos-storage-2` and `talos-storage-3`.
+### Let's Verify Our Disk Mount
+When Talos successfully mounts the extra disk, we should see it listed with `lsblk` without any partitions. We want to pass the raw disk to OpenEBS. In order to check, run a debug pod on your storage node and check the bind mounts.
 
-# Installing OpenEBS
-This was a pain to figure out. Documentation from OpenEBS is lacking, and so is documentation from Talos on the same topic. Here's what I found to work. You need a privileged namespace, bind mounts on all worker nodes, then DiskPools before you can start testing PVCs.
+- `kubectl debug node/talos-storage-1 -it --image=alpine -- /bin/sh`
+- `apk add lsblk`
+- `lsblk`
+- Check for the mount, showing the full capacity of your disk.
 
-## Bind Mounts
-After deploying the chart initially, lots of the pods were stuck initializing. It turns out that OpenEBS runs a 3 replica etcd statefulset which could run on any worker node, and that means you need to add the `/var/local` bind mount to every worker node, not only your storage nodes.
+Now repeat this whole process for any other Talos nodes you need. I have 3, so I'm doing `talos-storage-1`, `talos-storage-2` and `talos-storage-3`.
 
-Let's start with that:
+## Worker Nodes Also Need /var/local Mounted
+Certain OpenEBS components run on any node, and this requires all worker nodes to have `/var/local` mounted.
+
 ```yaml
-# ./patches/bind-var-local.patch
+# ./patches/mount-var-local.patch
 machine:
   kubelet:
     extraMounts:
@@ -121,10 +110,16 @@ machine:
           - rshared
           - rw
 ```
-- I have 3 workers in addition to my storage nodes so I ran these
-  - `talosctl patch mc -n 10.0.50.21 --patch @pathces/bind-var-local.patch`
-  - `talosctl patch mc -n 10.0.50.22 --patch @pathces/bind-var-local.patch`
-  - `talosctl patch mc -n 10.0.50.23 --patch @pathces/bind-var-local.patch`
+
+In my case, I applied this to my 3 worker nodes. I don't think a reboot is required, but you could if you wanted to:
+- `talosctl patch mc -n 10.0.50.21 --patch @patches/mount-var-local.patch`
+- `talosctl patch mc -n 10.0.50.22 --patch @patches/mount-var-local.patch`
+- `talosctl patch mc -n 10.0.50.23 --patch @patches/mount-var-local.patch`
+
+In order to check the other bind mount for `/var/local`, we have to wait until after deploying OpenEBS because the mount isn't utilized until a pod is deployed with a HostPath volume at or below this path. Specifically, the `openebs-io-engine-*` Daemonset maps to this path.
+
+# Installing OpenEBS
+This was a pain to figure out. Documentation from OpenEBS is lacking, and so is documentation from Talos on the same topic. Here's what I found to work. You need a privileged namespace, bind mounts on all worker nodes, then DiskPools before you can start testing PVCs.
 
 ## Privileged Namespace
 OpenEBS requires privileges, and the easiest way to handle that is by making the namespace privileged (rather than messing with machine configs).
@@ -245,12 +240,20 @@ openebs-promtail-d72cx                        1/1     Running   0             93
 openebs-promtail-hsxlc                        1/1     Running   0             9m23s
 openebs-promtail-npw7f                        1/1     Running   0             9m23s
 ```
-- If you are seeing stuff stuck initializing, double check the pods starting with `openebs-etcd-0` since a lot of things depend on that being up before it will initialize.
+- If pods are stuck initializing after a few minutes, start checking logs with `openebs-etcd-0` since a lot of things depend on that being up before it will initialize.
+  - Related to `/var/local` bind mounts not being added to worker nodes, `openebs-etcd-*` will have Warning events about "FailedMount", stating that a PVC doesn't exist. If you look closely, the path starts with `/var/local/...` which means you're missing the `/var/local` bind mount on one or more Talos worker/storage nodes.
+  - The fix in this situation would be to fix the bind mount on the worker nodes, and you could also try a reboot (you can identify the node based on the pod having issues). There's no need to change the OpenEBS deployment.
+  - After fixing it, you might see stale pods with errors. You can terminate pods in an error state, and if they are needed the Deployment or Daemonset responsible for them will recreate them as needed.
 
 ## Add DiskPool(s)
-I was excited at this point to test with a PVC, but then was confused about why it wouldn't provision anything. The Talos docs fall short here, seeming to imply that now is the time to test with a PVC, but if you pay close attention they only mention testing the local provisioner, adding to my confusion. It turns out you need to add DiskPools, which makes sense thinking about it. If you've ever used Longhorn there is a similar config needed after the initial install, so that you know what disk capacity you have to work with.
+I was excited at this point to test with a PVC, but then was confused about why it wouldn't provision anything. The Talos docs feel a bit sparse and seem to imply that now is the time to test with a PVC. But if you pay close attention they only mention testing the local provisioner, adding to my confusion. It turns out you need to add DiskPools, which makes sense in hindsight. If you've ever used Longhorn there is a similar config needed after the initial install, so that you know what disk capacity you have to work with.
 
-- Earlier, we mounted a 2TB disk to /var/mnt/nvme2tb in the talos-storage-1 node. Now we'll use that for our first DiskPool. I went with uring:
+- Earlier, we mounted that 2TB disk in the talos-storage-1 node. Now we'll use that for our first DiskPool
+- Get the disk ID by exec-ing into the openebs-io-engine pod
+  - Identify one of the io-engine pods: `kubectl get po -l app=io-engine -n openebs`
+  - Exec into the pod: `kubectl exec -it openebs-io-engine-jpnrh -c io-engine -n openebs -- bin/sh`
+  - `ls -lh /dev/disk/by-id/` - grab the one pointing to `/dev/sdb` in our case, which for me is `scsi-0QEMU_QEMU_HARDDISK_drive-scsi1`
+- FYI I went with uring instead of aio since it's newer and supposedly better
 ```yaml
 # diskpool-1.yaml
 apiVersion: "openebs.io/v1beta2"
@@ -260,10 +263,12 @@ metadata:
   namespace: openebs
 spec:
   node: talos-storage-1
-  disks: ["uring:///var/mnt/nvme2tb"]
-
-  # If you aren't running Talos, use the disk by-id path directly
-  #disks: ["uring:///dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1"]
+  disks: ["uring:///dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1"]
 ```
 - `kubectl apply -f diskpool-1.yaml`
-- Verify: `kubectl get dsp -n openebs`
+- Verify: `kubectl get dsp -n openebs` - quickly it should change to Created state and Online POOL_STATUS
+
+Repeat this process for any/all storage nodes you have. Since I'm virtualizing Talos, the disk path is exactly the same on all 3 nodes so I can reuse the config, just updating the pool name and the node name.
+
+## Testing A Replicated PVC
+Finally we are ready to test.
