@@ -43,8 +43,10 @@ machine:
       - 192.168.1.22
 ```
 - `talosctl patch mc -n 10.0.50.135 --patch @patches/storage1.patch`
-- I'm having trouble here with the node name changing, and I have to manually delete the random name from the cluster:
+  - I'm having trouble here with the node name changing, and I have to manually delete the random name from the cluster:
   - e.g. `kubectl delete node talos-lry-si8`
+  - Also you might need to delete the label `openebs.io/nodename=` if you already have openebs running and are adding/changing nodes
+    - `kubectl edit node talos-storage-1` and change the value to the current node name
 - Apply a patch to set some machine config stuff for OpenEBS which includes hugepages, a nodeLabel for where mayastor engine should run, and the `/var/local` bind mount:
 ```yaml
 # ./patches/openebs.patch
@@ -267,6 +269,8 @@ spec:
 ```
 - `kubectl apply -f diskpool-1.yaml`
 - Verify: `kubectl get dsp -n openebs` - quickly it should change to Created state and Online POOL_STATUS
+
+If you run into issues with diskpools stuck in Creating status, you will need to describe the dsp or check logs.
 
 Repeat this process for any/all storage nodes you have. Since I'm virtualizing Talos, the disk path is exactly the same on all 3 nodes so I can reuse the config, just updating the pool name and the node name.
 
