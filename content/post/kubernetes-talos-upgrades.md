@@ -27,7 +27,8 @@ Talos recommends using the `talosctl upgrade-k8s` command which automatically up
   - You need to choose a real Kubernetes version - https://kubernetes.io/releases/
   - This will take a while, so try to be patient.
 - Verify version: `kubectl get node`
-- That's it. You are now done.
+
+I like to update my local talosconfig repo which was used to deploy the original Talos cluster and also includes secrets used to recover in case of any problems. This is a good time to update the Kubernetes version in controlplane.yaml and worker.yaml for any new nodes you deploy.
 
 # Upgrade Talos OS
 https://www.talos.dev/v1.9/talos-guides/upgrading-talos/
@@ -58,5 +59,7 @@ Once Nodes have been upgraded, upgrade the `talosctl` client so the version matc
 - `curl -sL https://talos.dev/install | sh` (this gets the latest version)
   - You can also download a specific release from https://github.com/siderolabs/talos/releases, e.g. `curl -LJO https://github.com/siderolabs/talos/releases/download/v1.8.3/talosctl-linux-amd64`
 - Verify: `talosctl version --client`
+
+I like to update my local talosconfig repo which was used to deploy the original Talos cluster and also includes secrets used to recover in case of any problems. This is a good time to update the factory image in controlplane.yaml and worker.yaml for any new nodes you deploy.
 
 That's it!
