@@ -255,7 +255,7 @@ I was excited at this point to test with a PVC, but then was confused about why 
   - Identify one of the io-engine pods: `kubectl get po -l app=io-engine -n openebs`
   - Exec into the pod: `kubectl exec -it openebs-io-engine-jpnrh -c io-engine -n openebs -- bin/sh`
   - `ls -lh /dev/disk/by-id/` - grab the one pointing to `/dev/sdb` in our case, which for me is `scsi-0QEMU_QEMU_HARDDISK_drive-scsi1`
-- FYI I went with uring instead of aio since it's newer and supposedly better
+- FYI I went with uring instead of aio since it's the new kid on the block
 ```yaml
 # diskpool-1.yaml
 apiVersion: "openebs.io/v1beta2"
@@ -270,9 +270,136 @@ spec:
 - `kubectl apply -f diskpool-1.yaml`
 - Verify: `kubectl get dsp -n openebs` - quickly it should change to Created state and Online POOL_STATUS
 
-If you run into issues with diskpools stuck in Creating status, you will need to describe the dsp or check logs.
-
 Repeat this process for any/all storage nodes you have. Since I'm virtualizing Talos, the disk path is exactly the same on all 3 nodes so I can reuse the config, just updating the pool name and the node name.
 
+### Troubleshooting
+Sorry I can't be a ton of help here since I have only done really limited troubleshooting. If you run into issues with diskpools stuck in Creating status, you will need to describe the dsp or check logs.
+
+What I can say is that I'm running a homelab, which means I have 3 different disks, from 3 different manufacturers. Two of them worked in this configuration, but one did not. The disk is fine, it's fairly new, I've tried wiping it multiple times, multiple ways, but it just would not work with the diskpool. I tried doing it as a bind mount and using /mnt/local/nvme2tb (this one requires adding the volume to the io-engine Daemonset), mounting /dev/sdb, mounting /dev/sdb1, everything I could think of, but it would not create. I rebuilt the Talos node but got the same results. I switched to a different disk and changed nothing else, and it works totally fine. For prosperity, these are the disks I have and which ones worked in this configuration.
+- Samsung 970 EVO Plus 2TB - no problems
+- Samsung 990 EVO 2TB - no problems
+- -WD BLACK SN770 2TB - no problems
+- Crucial P3 Plus 2TB (CT2000P3PSSD8) - COULD NOT GET THIS WORKING :(
+
+If you are reading this and you know or think you might know why this didn't work, please reach out! I'm interested in understanding why this wouldn't work and how I could troubleshoot better.
+
 ## Testing A Replicated PVC
-Finally we are ready to test.
+If you are here, you have at least one working diskpool and are ready to test that PVC provisioning works and can be attached to a running pod. Let's test that.
+
+- Verify diskpools: `kubectl get dsp -n openebs` - for my 3 storage nodes with 2TB volumes, I'm seeing this
+```sh
+NAME     NODE              STATE     POOL_STATUS   CAPACITY        USED   AVAILABLE
+pool-1   talos-storage-1   Created   Online        1998443249664   0      1998443249664
+pool-2   talos-storage-2   Created   Online        1998443249664   0      1998443249664
+pool-3   talos-storage-3   Created   Online        1998443249664   0      1998443249664
+```
+- Check what storage classes are available: `kubectl get sc`
+```sh
+NAME                     PROVISIONER               RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+mayastor-etcd-localpv    openebs.io/local          Delete          WaitForFirstConsumer   false                  6h15m
+mayastor-loki-localpv    openebs.io/local          Delete          WaitForFirstConsumer   false                  6h15m
+openebs-hostpath         openebs.io/local          Delete          WaitForFirstConsumer   false                  6h15m
+openebs-single-replica   io.openebs.csi-mayastor   Delete          Immediate              true                   6h15m
+```
+- For now, we're interested in testing that `openebs-single-replica` SC that uses Mayastor, so write this file. Note that this uses the default namespace:
+```yaml
+# test-pvc-openebs-single-replica.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openebs-testpvc
+spec:
+  storageClassName: openebs-single-replica
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+```
+- Apply it: `kubectl apply -f test-pvc-openebs-single-replica.yaml`
+- Check PV and PVC:
+  - `kubectl get pv`
+  - `kubectl get pvc` - you should see a PVC named `openebs-testpvc` with status Bound and storage class `openebs-single-replica`
+- Deploy a test pod to attach the PVC to - this pod is also in the default namespace:
+```yaml
+# pod-using-testpvc.yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testlogger
+spec:
+    containers:
+    - name: testlogger
+      image: alpine:3.20
+      command: ["/bin/ash"]
+      args: ["-c", "while true; do echo \"$(date) - test log\" >> /mnt/test.log && sleep 1; done"]
+      volumeMounts:
+      - name: testvol
+        mountPath: /mnt
+    volumes:
+    - name: testvol
+      persistentVolumeClaim:
+        claimName: openebs-testpvc
+```
+- `kubectl apply -f pod-using-testpvc.yaml`
+- Verify it's running: `kubectl get po testlogger`
+- Exec into the test pod: `kubectl exec -it testlogger -- /bin/sh`
+- Look at your mounts with `df -h /mnt`. Since OpenEBS Mayastor uses NVMe-oF you should see that mount path `/mnt` attached to what looks like a NVMe block device.
+```sh
+Filesystem                Size      Used Available Use% Mounted on
+/dev/nvme0n1              9.7G     28.0K      9.2G   0% /mnt
+```
+  - Hmm. The size doesn't quite add up. 9.7G is close to 10Gi but then 28.0K used does not equal 9.2G available. Hmm...
+- Cleanup:
+  - `kubectl delete -f pod-using-testpvc.yaml`
+  - `kubectl delete -f test-pvc-openebs-single-replica.yaml`
+
+## What Is A "Single" Replica Anyway?
+> A replica is an exact reproduction of something...
+
+A replica by definition cannot exist without copying something that already exists, which inherently means there must be at least 2. In the context of OpenEBS, a single replica just means you only have ONE copy of the data. It gets randomly assigned to one of the diskpools available. If that disk fails, that data is gone. But we are using OpenEBS for the purpose of replication, so how do we get more replicas??? Follow me.
+
+- Create a new storage class with 2 replicas (feel free to do 3 or any value at this point):
+```yaml
+# openebs-2-replicas-sc.yaml
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: openebs-2-replicas
+parameters:
+  protocol: nvmf
+  repl: "2"
+provisioner: io.openebs.csi-mayastor
+```
+- `kubectl apply -f openebs-2-replicas-sc.yaml`
+- Verify: `kubectl get sc`
+- Test - deploy another test-pvc using the new SC:
+```yaml
+# test-pvc-openebs-2-replicas.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openebs-testpvc
+spec:
+  storageClassName: openebs-2-replicas
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+```
+- `kubectl apply -f openebs-2-replicas.yaml`
+- Test with a pod, using the same pod from earlier - `kubectl apply -f pod-using-testpvc.yaml`
+- Exec into the test pod: `kubectl exec -it testlogger -- /bin/sh`
+- Check your mounted disk: `df -h /mnt`
+
+# Conclusion
+I'm going to stop here. I didn't go into any details about how to check which diskpools hold the replica(s) for the PV, but I assume there is a way to do that. I also did not look at how to recover in case there is a diskpool or storage node failure. Assuming you had 3 replicas, and one went down, there would be no data loss.
+
+I didn't cover performance, monitoring, recovery, or anything else that you probably care about long term. That could be a future post, but my next stop is actually evaluating Longhorn with the v2 engine. As of today, they have released 1.8.0-rc5, which enables support for their v2 engine with Talos (this just means they support NVMe-oF). If Longhorn can now work with NVMe-oF and Talos, to me that is a much more mature and feature rich product, with more community support than OpenEBS. I believe it also supports snapshots and other features that OpenEBS does not currently.
+
+My next post will be all about blowing this setup away and doing it all over with Longhorn. Hopefully by then the stable 1.8.0 will have been released.
