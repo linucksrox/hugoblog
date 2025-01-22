@@ -1,7 +1,7 @@
 ---
 layout: blog
 draft: false
-title: Kubernetes Storage - OpenEBS Replicated Storage Mayastor (WIP)
+title: Kubernetes Storage - OpenEBS Replicated Storage Mayastor
 date: 2025-01-21
 tags:
   - kubernetes
@@ -278,7 +278,7 @@ Sorry I can't be a ton of help here since I have only done really limited troubl
 What I can say is that I'm running a homelab, which means I have 3 different disks, from 3 different manufacturers. Two of them worked in this configuration, but one did not. The disk is fine, it's fairly new, I've tried wiping it multiple times, multiple ways, but it just would not work with the diskpool. I tried doing it as a bind mount and using /mnt/local/nvme2tb (this one requires adding the volume to the io-engine Daemonset), mounting /dev/sdb, mounting /dev/sdb1, everything I could think of, but it would not create. I rebuilt the Talos node but got the same results. I switched to a different disk and changed nothing else, and it works totally fine. For prosperity, these are the disks I have and which ones worked in this configuration.
 - Samsung 970 EVO Plus 2TB - no problems
 - Samsung 990 EVO 2TB - no problems
-- -WD BLACK SN770 2TB - no problems
+- WD BLACK SN770 2TB - no problems
 - Crucial P3 Plus 2TB (CT2000P3PSSD8) - COULD NOT GET THIS WORKING :(
 
 If you are reading this and you know or think you might know why this didn't work, please reach out! I'm interested in understanding why this wouldn't work and how I could troubleshoot better.
