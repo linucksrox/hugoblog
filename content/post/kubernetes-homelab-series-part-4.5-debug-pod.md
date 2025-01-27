@@ -20,6 +20,8 @@ https://www.siderolabs.com/blog/how-to-ssh-into-talos-linux/
 
 On the other hand, I just needed to test manually mounting NVMe over TCP when democratic-csi wasn't working as expected, and this was the only way :)
 
+In case anyone is wondering, why not just run `kubectl debug` and target the node, that method doesn't have the ability to mount `/dev` which was needed in Talos to debug CSI driver stuff. So the alternative is to run a pod with `/dev` mounted, and then attach to it.
+
 # Show Me The Money!
 Anyway, here's how to deploy the debug container.
 
@@ -51,6 +53,7 @@ Anyway, here's how to deploy the debug container.
   ```
 - Deploy the pod: `kubectl apply -f debug-pod.yaml`
 - Drop into a shell inside the container: `kubectl exec -it debugpod -n kube-system -- /bin/sh`
+- Alternatively, run an ephemeral container in the pod with sysadmin privileges (root): `kubectl debug -it debugpod --image=alpine:3.21 --target=debugcontainer -n kube-system --profile=sysadmin`
 - Do something useful. In my case, I wanted to check if a pod running in this cluster can reach out to Cloudflare and Google DNS servers so:
   - Install telnet: `apk add --update busybox-extras`
   - `telnet 1.1.1.1 53` - Ctrl+C, then e to exit
