@@ -23,6 +23,8 @@ On the other hand, I just needed to test manually mounting NVMe over TCP when de
 In case anyone is wondering, why not just run `kubectl debug` and target the node, that method doesn't have the ability to mount `/dev` which was needed in Talos to debug CSI driver stuff. So the alternative is to run a pod with `/dev` mounted, and then attach to it.
 
 # Show Me The Money!
+https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#static-profile
+
 Anyway, here's how to deploy the debug container.
 
 - Write a new file `debugpod.yaml` and replace [nodename] with the name of the specific node you want this deployed to in your cluster. Optionally change the image if you don't want to use Alpine. This is my go-to default because of how small and fast it is, and installing packages with APK is about as fast as it gets.
