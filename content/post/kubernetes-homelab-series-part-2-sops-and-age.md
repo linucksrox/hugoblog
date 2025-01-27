@@ -64,8 +64,25 @@ I'm just sticking to basic usage and running sops commands manually for now, at 
       encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
       age: replace-with-your-public-key
   ```
+- Create `.gitignore` to make sure you don't commit unencrypted secrets to your repo!
+```ini
+secrets.yaml
+talosconfig
+controlplane.yaml
+worker.yaml
+kubeconfig
+```
+- Encrypt secrets.yaml: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
+- Encrypt controlplane.yaml: `sops --encrypt _out/controlplane.yaml > _out/controlplane.encrypted.yaml`
+- Encrypt worker.yaml: `sops --encrypt _out/worker.yaml > _out/worker.encrypted.yaml`
+- Initialize the git repo: `git init`
+- Make your initial git commit: `git add .`
+- Double check that only encrypted yaml files are staged: `git status`
+- Commit: `git commit -m "initial commit with encrypted cluster secrets"`
 
 # Encrypting and Decrypting Files
+Later, when you pull the repo to make changes to your cluster, you might only have the encrypted version of the files. You will need to decrypt the files, operate on the decrypted versions, and when you're done, re-encrypt them. At that point, you can commit your changes to the git repo and push them up.
+
 Now you are ready to actually encrypt/decrypt values in your files. This is a good point to come up with a naming convention if you want to keep separate copies of the decrypted files, because you should make sure you add the decrypted version to .gitignore since the whole point of this is to make sure you don't commit plaintext secrets to a repo anywhere (public or private).
 
 - Encryption: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`

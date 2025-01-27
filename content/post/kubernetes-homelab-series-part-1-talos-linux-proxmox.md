@@ -75,42 +75,16 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
 - Build the Talos image you will be using to install Talos to each node. This allows you to add extensions which add capabilities such as iSCSI support and QEMU guest agent for Proxmox.
   - Go to https://factory.talos.dev/ - Bare Metal Machine > 1.8.1 (or the version you want) > AMD64 > Check siderolabs/qemu-guest-agent > Check siderolabs/iscsi-tools > (no customization) > copy the factory image string under "Initial Install" section, e.g. `factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1`
 - Generate base machine configs: https://www.talos.dev/v1.8/talos-guides/install/virtualized-platforms/proxmox/#generate-machine-configurations
-  - The `CONTROL_PLANE_IP` should be the IP of one of the control plane nodes, or optionally the virtual IP if you plan on load balancing the control plane (highly recommended for HA: https://www.talos.dev/v1.8/talos-guides/network/vip/)
+  - The `CONTROL_PLANE_IP` needs to point to one of the control plane nodes. The best practive is to use a VIP, allowing for HA due to the fact that it is automatically assigned to another control plane node if one goes offline (https://www.talos.dev/v1.8/talos-guides/network/vip/)
+    - You can use a hostname that points to the VIP, but I prefer to use the VIP directly.
+    - Adding a VIP is essentially done by configuring `machine.network.interfaces.vip.ip` in the Talos machine config (see below), which automatically enables the functionality in Talos to load balance this VIP (e.g. if the VIP is on node 1 and that goes down, the VIP will automatically be moved to another node that is online).
+    - It's not recommended to use the VIP for the Talos API (used with `talosctl`). The main purpose of the VIP is for use with the Kubernetes API (used with `kubectl`).
+    - If you don't use a VIP, you can just use the IP of one of the control plane nodes, but if that particular node goes down, even if other control plane nodes are still up, you will not be able to run `kubectl` commands against your cluster without manually editing your `kubeconfig`. A VIP would also be pointless if you only have a single control plane node.
   - Feel free to change the cluster name (default is "talos-proxmox-cluster")
     ```bash
     talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --with-secrets secrets.yaml --output-dir _out --install-image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1
     ```
-- In Part 2, we will discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo. The TLDR steps for now are as follows:
-  - Install `sops` and `age` binaries locally
-  - Generate a key pair with `age-keygen`
-  - Create a local SOPS config file named `.sops.yaml` with the following contents. This tells SOPS which files to encrypt, and which encryption key to use.
-  ```yaml
-  ---
-  creation_rules:
-    - path_regex: /*secrets(\.encrypted)?.yaml$
-      age: replace-with-your-public-key
-    - path_regex: /*controlplane(\.encrypted)?.yaml$
-      encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
-      age: replace-with-your-public-key
-    - path_regex: /*worker(\.encrypted)?.yaml$
-      encrypted_regex: "(^token|crt|key|id|secret|secretboxEncryptionSecret)$"
-      age: replace-with-your-public-key
-  ```
-  - Encrypt secrets.yaml: `sops --encrypt secrets.yaml > secrets.encrypted.yaml`
-  - Encrypt controlplane.yaml: `sops --encrypt _out/controlplane.yaml > _out/controlplane.encrypted.yaml`
-  - Encrypt worker.yaml: `sops --encrypt _out/worker.yaml > _out/worker.encrypted.yaml`
-- **IMPORTANT!** Now's a good time to create `.gitignore` to make sure you don't commit unencrypted secrets to your repo!
-```ini
-secrets.yaml
-talosconfig
-controlplane.yaml
-worker.yaml
-kubeconfig
-```
-- Initialize the git repo: `git init`
-- Make your initial git commit: `git add .`
-- Double check that only encrypted yaml files are staged: `git status`
-- Commit: `git commit -m "initial commit with encrypted cluster secrets"`
+- In Part 2, I discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo: https://blog.dalydays.com/post/kubernetes-homelab-series-part-2-sops-and-age/ - Feel free to do that now if you want to add a little bit of complexity. Otherwise, continue to the end of this one and circle back to that article afterward so you can safely encrypt and store your configs in a git repo.
 - Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
   - Best practice is to install the base config to each node (`controlplane.yaml` or `worker.yaml`), then apply patches to customize nodes to set the name, static IP, etc.
   - To set a static IP, you have to specify either an `interface` or a `deviceSelector` (mutually exclusive). By default, Predictable Interface Names are not enabled, meaning your ethernet name might be something like `enxSOMETHING` based on the MAC address. One way around this is to enable Predictable Interface Names by setting the kernel argument `net.ifnames=0` on first boot, or you can use a generic `deviceSelector` like I did in the example below. If you only have 1 NIC, this will work just fine. If you mave multiple NICs, you can run `talosctl get links -n [node-ip]` and select the interface name from the ID column, or maybe the MAC address from the HW ADDR column. I'm just using `busPath: "0*"` to select the default NIC without changing any other options.
@@ -219,8 +193,6 @@ kubeconfig
         nameservers:
           - 192.168.1.22
     ```
-- Add your patches to the git repo: `git add .` and `git commit -m "add patches"`
-- Push your git repo somewhere like GitHub or GitLab (I'll just assume you know how already or can search DuckDuckGo)
 
 ## Talos Linux Installation
 Finally, time to actually install Talos!
