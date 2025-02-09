@@ -75,14 +75,18 @@ It's the easiest solution to deploy (and maintain) a Kubernetes cluster.
 - Build the Talos image you will be using to install Talos to each node. This allows you to add extensions which add capabilities such as iSCSI support and QEMU guest agent for Proxmox.
   - Go to https://factory.talos.dev/ - Bare Metal Machine > 1.8.1 (or the version you want) > AMD64 > Check siderolabs/qemu-guest-agent > Check siderolabs/iscsi-tools > (no customization) > copy the factory image string under "Initial Install" section, e.g. `factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1`
 - Generate base machine configs: https://www.talos.dev/v1.8/talos-guides/install/virtualized-platforms/proxmox/#generate-machine-configurations
-  - The `CONTROL_PLANE_IP` needs to point to one of the control plane nodes. The best practive is to use a VIP, allowing for HA due to the fact that it is automatically assigned to another control plane node if one goes offline (https://www.talos.dev/v1.8/talos-guides/network/vip/)
+  - The `CONTROL_PLANE_IP` needs to point to one of the control plane nodes. The best practice is to use a VIP, allowing for HA due to the fact that it is automatically assigned to another control plane node if one goes offline (https://www.talos.dev/v1.8/talos-guides/network/vip/)
     - You can use a hostname that points to the VIP, but I prefer to use the VIP directly.
     - Adding a VIP is essentially done by configuring `machine.network.interfaces.vip.ip` in the Talos machine config (see below), which automatically enables the functionality in Talos to load balance this VIP (e.g. if the VIP is on node 1 and that goes down, the VIP will automatically be moved to another node that is online).
     - It's not recommended to use the VIP for the Talos API (used with `talosctl`). The main purpose of the VIP is for use with the Kubernetes API (used with `kubectl`).
     - If you don't use a VIP, you can just use the IP of one of the control plane nodes, but if that particular node goes down, even if other control plane nodes are still up, you will not be able to run `kubectl` commands against your cluster without manually editing your `kubeconfig`. A VIP would also be pointless if you only have a single control plane node.
   - Feel free to change the cluster name (default is "talos-proxmox-cluster")
     ```bash
-    talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --with-secrets secrets.yaml --output-dir _out --install-image factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.8.1
+    # CONTROL_PLANE_IP should be the VIP you plan on using (not the DHCP assigned), or the IP of one of your control plane nodes if not using a VIP
+    export CONTROL_PLANE_IP=10.0.50.160
+    # FACTORY_IMAGE should be updated to the image you want to install
+    export FACTORY_IMAGE=factory.talos.dev/installer/88d1f7a5c4f1d3aba7df787c448c1d3d008ed29cfb34af53fa0df4336a56040b:v1.9.2
+    talosctl gen config talos-proxmox-cluster https://$CONTROL_PLANE_IP:6443 --with-secrets secrets.yaml --output-dir _out --install-image $FACTORY_IMAGE
     ```
 - In Part 2, I discuss encrypting YAML files with SOPS + age, which you can use to encrypt this file and store it securely in a git repo: https://blog.dalydays.com/post/kubernetes-homelab-series-part-2-sops-and-age/ - Feel free to do that now if you want to add a little bit of complexity. Otherwise, continue to the end of this one and circle back to that article afterward so you can safely encrypt and store your configs in a git repo.
 - Create node specific patches (used for defining a static IP, etc.): https://www.talos.dev/v1.8/talos-guides/configuration/patching/
