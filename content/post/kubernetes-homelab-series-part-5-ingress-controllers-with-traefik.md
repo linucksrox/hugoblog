@@ -170,6 +170,91 @@ Note the fact that I used `:443` to redirect to, instead of the entryPoint **nam
 
 And in case you're not familiar, "permanent" just means the difference between a normal redirect (HTTP 302) and permanent redirect (HTTP 301) which determines which HTTP response is used.
 
+## Logging, externalTrafficPolicy and IPAllowList Middleware
+> Note: This is an update as of 3/10/2025
+
+If you want access logs enabled which are not by default, add this section to your values.yaml file:
+```yaml
+logs:
+  access:
+    enabled: true
+```
+
+This makes it so that you can view access logs from the pod or deployment using something like `kubectl -n traefik logs deployments/traefik`
+
+After enabling this, I realized all requests had the same source IP of 10.244.1.0. I was trying to use the IPAllowList middleware for a `/admin` endpoint on a service but it wasn't working due to Traefik being unable to see the true source IP. After a bit of research, I found that I could change the `externalTrafficPolicy` from Cluster to Local. Read https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip for more info.
+
+There are pros and cons to this approach. If you need to preserve the source IP, I found this to be the best option. The down side is that traffic can only come in on a node where one of the Traefik pods lives. So earlier when you decided whether to run 2 replicas, a daemonset, etc. that comes into play here. But if you run 2-3 replicas or use a daemonset, this is not a problem.
+
+Change externalTrafficPolicy to Local:
+```yaml
+service:
+  spec:
+    externalTrafficPolicy: Local
+```
+
+I read that it might be possible to use X-Forwarded-For, I didn't dive very far into X-Forwarded-For settings or depth on the middleware. It might be possible to leave this policy set to Cluster and use the header info instead. However, you will need to consider security as you might not necessarily trust the X-Forwarded-For header from internet traffic as this can easily be spoofed.
+
+### IPAllowList Middleware
+So anyway, we added logging and changed the externalTrafficPolicy to Local so that Traefik sees the true source IP from the request and we can see the request logs. Now I want to show a quick example of how to restrict access to a certain path on a service, while allowing all traffic to reach all other pages. While I'm sure there are many ways to tackle this problem, this is a straightforward way to block access to `/admin` for a service.
+
+I have an ecommerce shop that I want to make available on the internet. It has an admin login page at `/admin` so I want to just block any public traffic from reaching that page, no exceptions. See below for info about IngressRoute which is what I'm using in this example:
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: evershop.example.com
+  namespace: evershop
+spec:
+  secretName: evershop.example.com-secret
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - evershop.example.com
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: evershop-service-ingressroute
+  namespace: evershop
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  tls:
+    secretName: evershop.example.com-secret
+  routes:
+  - match: Host(`evershop.example.com`) && PathPrefix(`/admin`)
+    kind: Rule
+    services:
+      - name: app
+        port: 3000
+        scheme: http
+    middlewares:
+      - name: admin-ipallowlist
+  - match: Host(`evershop.example.com`)
+    kind: Rule
+    services:
+      - name: app
+        port: 3000
+        scheme: http
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: admin-ipallowlist
+  namespace: evershop
+spec:
+  ipAllowList:
+    sourceRange:
+      - 192.168.0.0/23
+      - 10.0.50.0/24
+```
+
+To break down what is happening there, we have a Certificate resource which is needed to get a signed certificate through Cert-Manager. At the bottom we have a Middleware which is a Traefik specific CRD. This one uses `ipAllowList` and I specified 2 local subnets that I want to allow. Finally, we have an IngressRoute. Within that, there are two routes that can be matched, and the one that includes the PathPrefix of `/admin` in the match rule has an extra `middlewares:` section that references `admin-ipallowlist`. That tells Traefik that any inbound traffic to this service that has `/admin` in the path should also be checked against the IPAllowList **before** routing traffic to the backend `app` service. If the source IP doesn't match the sourceRange, it will return a 403 Forbidden page.
+
+You can customize the 403 Forbidden page, but I didn't want to do that at this time. Just know that it can be routed to another page (or another service) by using another Middleware of type `errors`: https://doc.traefik.io/traefik/middlewares/http/errorpages/
+
 ## Other Options
 Some of the options you might notice depend on persistent storage. Just be sure you have storage configured in your cluster before using any of those options (which I'll talk about in my next post).
 
@@ -322,6 +407,47 @@ This is a super basic Ingress resource which can be useful for testing. It inclu
 - Test
   - Update DNS or your local hosts file to point your host (whoami.example.com) to the IP address of Traefik's LoadBalancer service (`kubectl get svc -n traefik`)
   - Navigate to whoami.example.com in the browser. If you test too soon, you will get the self signed cert from Traefik. If you wait long enough and are still using the staging certificate issuer, you will still have to click through the warning message but it should say it's issued by Let's Encrypt Staging. If you use a production issuer, this should be secure with no warnings.
+
+## IngressRoute
+This is a Traefik specific way to create an Ingress. It makes things easier if you want to use any Traefik features such as Middleware. I've been using this method for everything just to be consistent, plus for some reason my certificates get generated quickly with cert-manager using this method over Ingress with annotations. Let's look at the last Ingress example but as an IngressResource. You will need to add a separate Certificate resource.
+
+```yaml
+# whoami-ingressroute.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: whoami.example.com
+  namespace: whoami
+spec:
+  secretName: whoami.example.com-secret
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  dnsNames:
+    - whoami.example.com
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: whoami-service-ingressroute
+  namespace: whoami
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  tls:
+    secretName: whoami.example.com-secret
+  routes:
+  - match: Host(`whoami.example.com`)
+    kind: Rule
+    services:
+      - name: whoami-svc
+        port: 80
+        scheme: http
+```
+
+- Apply using `kubectl apply -f whoami-ingressroute.yaml`
+- View IngressRoute `kubectl get ingressroute -n whoami`
+  - This will not appear as an Ingress anymore, since it's an IngressRoute CRD now. So `kubectl get ing -n whoami` will not list it.
 
 # What About Gateway API?
 This Kong article has a lot of good information on the topic: https://konghq.com/blog/engineering/gateway-api-vs-ingress
