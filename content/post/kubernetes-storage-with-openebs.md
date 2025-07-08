@@ -81,7 +81,7 @@ machine:
   ```
   - Apply: `talosctl patch mc -n 10.0.50.31 --patch @patches/mount-sdb.patch` - At this point the Talos node will reboot and should come back up healthy in a minute.
   - View the console or check the dashboard with `talosctl dashbord -n 10.0.50.31`
-  - If you see an error about being unable to mount the disk or the partition being the wrong type, etc. you will need to wipe the disk and create a fresh GPT partition. As of Talos 1.9.0 this can be done with `talosctl wipe sdb -n 10.0.50.31`, otherwise you would need to do this outside of Talos.
+  - If you see an error about being unable to mount the disk or the partition being the wrong type, etc. you will need to wipe the disk and create a fresh GPT partition. As of Talos 1.9.0 this can be done with `talosctl wipe disk sdb -n 10.0.50.31`, otherwise you would need to do this outside of Talos.
     - `talosctl wipe disk sdb -n 10.0.50.31` - where `sdb` is the device, you confirmed this right? Confirm using `talosctl get disks -n 10.0.50.31`
     - Otherwise from Proxmox you could do this: Shut down the VM and do this in proxmox with `wipefs /dev/yourdev` and then use `fdisk /dev/yourdev` > `g` > `w` (`g` writes a new GPT table, `w` writes to disk). Now power Talos back on and it should do its thing.
     - Yet another option would be to boot into a different Linux ISO on the VM and use a tool like Gparted. Whatever you like best.
