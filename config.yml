@@ -40,7 +40,7 @@ params:
   TocOpen: true
   ShowPostNavLinks: true
   ShowCodeCopyButtons: true
-  comments: true
+  comments: false
   mainSections:
     - post
 
