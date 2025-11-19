@@ -17,6 +17,7 @@ definition go here
 definition go here
 
 # Walkthrough
+- Install flux CLI
 - Generate a PAT and export
   - `export GITLAB_TOKEN=glpat-...`
 - Bootstrap flux
