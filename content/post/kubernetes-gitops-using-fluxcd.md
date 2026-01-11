@@ -25,6 +25,7 @@ This provides additional benefits as well, including:
 FluxCD is one of several GitOps tools for Kubernetes. Flux is a great into to GitOps because it's simple to get started, and it's a CNCF Graduated project so it's stable and works very well, not to mention having a lot of users and great community in case you get stuck or have questions.
 
 # Walkthrough
+This guide is somewhat specific to GitLab. If you are using GitHub or others, you can still use FluxCD but some commands may be slightly different such as the bootstrap command.
 - Install flux CLI
 - Generate a PAT and export
   - `export GITLAB_TOKEN=glpat-...`
