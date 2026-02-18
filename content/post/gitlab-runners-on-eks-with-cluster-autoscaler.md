@@ -108,25 +108,25 @@ Other factors I considered throughout this process:
 - Migration from legacy runners. The plan was to introduce the new runners and ask developers to start testing. We had mixed results. The backup plan was to start switching tags to the new runners, and then removing those tags from the old runners, phasing them out. Once we phase the old runners out and haven't had any outages or break/fix tickets come in, we can finally decommission the old infrastructure and fully realize the security and cost savings.
 
 # Gotchas
-## eksctl
+## > eksctl
 This is a handy utility, but is not idempotent by design. If you deploy a new cluster with this tool, and later on decide to change something about that cluster (but don't want to rebuild), you can't necessarily update your config and redeploy. Even the command is different: new builds are `eksctl create cluster` where certain changes can be done with `eksctl upgrade cluster`. Some changes to managed nodegroups can be done with `eksctl update nodegroup` but others require completely rebuilding the nodegroup. But in the end, the total cluster config and deployment pipeline is significantly simpler to build and understand than it would have been using Cloudformation.
 
-## EKS Built-in CNI
+## > EKS Built-in CNI
 The AWS CNI that comes out of the box is that assigns a unique IP from your VPC subnet to every pod. I was not expecting this, and during initial POC testing I quickly found out when I started scaling up parallel jobs. Luckily it's possible to add a new CIDR block to the existing VPC, so I went ahead and added a new block and split that into 2 subnets in different AZs, then wired those up to the existing route table and out through the existing NAT gateway. Crisis averted. We could have switched CNIs as well, but I was ready to move forward, and since this was supported it was a little bit less effort in the short term. If we start going beyond 1000 parallel jobs then I'll be revisiting this one and moving to something else. For now, we're well below that, so it's noted and we can move on.
 
-## Manual Changes
+## > Manual Changes
 Manual changes still need to be made in the current state. After building the cluster (fully automated), it's in a vanilla state and requires you to manually deploy your resources. For us this includes Metrics Server, Cluster Autoscaler and gitlab-runners. This is an area where GitOps would help tremendously.
 
-## Cluster Autoscaler
+## > Cluster Autoscaler
 This one is more interesting than most of the other gotchas. This one took the most time and has caused most of the hurdles that we have had to overcome. Here's what I ran into, in order.
 
-### Scaling Up
+### >> Scaling Up
 This is the easy part. Deploy Cluster Autoscaler (CA) and configure its min/max thresholds. However, there's a little bit of glue you need to tie this together with the Managed Nodegroups and the AutoScalingGroups (ASG) they manage. It's not 100% ready out of the box. Here's a recap of what needs to happen, how it works:
 - CA needs permission to read and make changes to the ASG. This is done via an IAM role attached to the EC2 instance powering your worker nodes (every worker node has the same profile). If you specify `autoScaler: true` in the eksctl config, this is all handled automatically.
 - Cluster Autoscaler (CA) interacts directly with the ASG, increasing desired capacity to scale up. It identifies the correct ASG by matching with tags on the ASG. These are already set in the eksctl config.
 - It's pretty easy to check if this works. If you submit more jobs from GitLab, wait a minute and then check to see if the ASG requested more instances. If that doesn't work, move to troubleshooting (checking CA logs, IAM permissions, etc.).
 
-### Scaling Down
+### >> Scaling Down
 This is where it starts to get really interesting. During initial testing, scale-up and scale-down worked great. I believe the default was 10 minutes before scaling down, but I didn't experience any problems. After running more workloads over time, I got a ticket that jobs were pending for a long time. I quickly realized that autoscaling wasn't working. The online worker nodes were taking jobs just fine, but CA wasn't doing what I expected.
 
 What went wrong here?
@@ -138,15 +138,15 @@ CA was punishing itself and I gave it no other choice.
 
 The solution? What if I deployed another, smaller managed nodegroup (2 nodes for HA), labeled it management, and isolated it from CA? So that's exactly what I did. Add that to the EKS deployment, add labels and taints, and update taints/tolerations on the CA deployment. I protected it from itself, and this problem is solved.
 
-### Scaling Down To 0
+### >> Scaling Down To 0
 This actually began as a request for a brand new type of runner we had not implemented before. There was a new need to build Dockerfiles on `arm64`, so I began evaluating options. Just because you can doesn't mean you should, and while my first option was running a QEMU based build which could spit out multi-platform images from a single `amd64` node, it wasn't efficient and wasn't worth the effort. The developers already had a completely separate Dockerfile with different build steps, so why not just give them a runner to build on `arm64` natively?
 
 I decided to create nother managed nodegroup, but given the type of workload, the infrequency, and risk if jobs get interrupted, I decided it was worthwhile to base this on spot instances, plus while we're at it let's scale this one down to 0 since most of the time it's unused and would be sitting idle, wasting money.
 
-#### Spot Instances
+#### >>> Spot Instances
 This isn't too difficult. In the eksctl config, enable `spot: true` and be sure to specify at least 2 or 3 different instance types within the same family with the same minimum CPU/RAM specs. Just in case one type is not available during spot request, it can pick from something else so that jobs are not stuck pending. I also ran into this. You're already saving so much money, this is not the time to be a stickler.
 
 I think that's it, actually.
 
-#### Scaling Back Up From 0
+#### >>> Scaling Back Up From 0
 The easy part is scaling down, that was already functioning. But Once you remove all instances from the ASG, now there's a problem. How does CA know which ASG to go modify? Previously, it would use the running Kubernetes node to discover ASG info. When you get to the point where this ASG has no worker nodes running in the cluster, CA has less visibility, requiring you to add a specific tag to the ASG that it uses to identify it.
