@@ -117,6 +117,22 @@ The AWS CNI that comes out of the box is that assigns a unique IP from your VPC 
 ## > Manual Changes
 Manual changes still need to be made in the current state. After building the cluster (fully automated), it's in a vanilla state and requires you to manually deploy your resources. For us this includes Metrics Server, Cluster Autoscaler and gitlab-runners. This is an area where GitOps would help tremendously.
 
+## > Spot Instances
+This isn't too difficult. In the eksctl config, enable `spot: true` and be sure to specify at least 2 or 3 different instance types within the same family with the same minimum CPU/RAM specs. Just in case one type is not available during spot request, it can pick from something else so that jobs are not stuck pending. I also ran into this. You're already saving so much money, this is not the time to be a stickler.
+
+I think that's it for spot instances.
+
+## > OOMKilled Jobs
+In our case going from EC2 instances with 8GB RAM and 4GB swap to pods with a strict 8GB limit caused a couple of OOMKills here and there. It turns out this was one of the unknowns we anticipated going into the migration.
+
+Why does this happen if the RAM limit matches? On the EC2 instance, the job has full reign of the VM it runs on, so not only is the Linux kernel more conservative about preventing OOMkills, it also has a 4GB swap buffer that it can exhaust before giving up.
+
+This is actually a major factors I found to be related to the significant performance increase for some workloads on EKS, despite no changes to the pipeline and similar resource limites from a CPU/RAM perspective. Why would a job run 25% faster? It could be that we were silently exceeding the resource limits on legacy runners but it wasn't bad enough to break jobs, just bad enough to make them slow.
+
+Does this mean EKS is worse or less reliable in a way? No. This makes it obvious that jobs were already overprovisioned, but nobody was aware of it. Nobody was even aware of the performance degradation due to heavy overutilization of swap. I see it as a feature, it highlights the need for better visibility, and it highlights the importance of understanding what we **truly** need from a resource perspective to run jobs. No more throwing hardware at the problem.
+
+We should understand what jobs cost from a resource and financial perspective, because that will allow us properly tune autoscaling, make things run much more efficiently, likely save significantly on cost, and make informed decisions on resource quota increases if needed.
+
 ## > Cluster Autoscaler
 This one is more interesting than most of the other gotchas. This one took the most time and has caused most of the hurdles that we have had to overcome. Here's what I ran into, in order.
 
@@ -138,15 +154,15 @@ CA was punishing itself and I gave it no other choice.
 
 The solution? What if I deployed another, smaller managed nodegroup (2 nodes for HA), labeled it management, and isolated it from CA? So that's exactly what I did. Add that to the EKS deployment, add labels and taints, and update taints/tolerations on the CA deployment. I protected it from itself, and this problem is solved.
 
+#### > Management Nodegroup
+Without going into too much detail, just keep in mind that this means we have to manage taints and tolerations so that management workloads go to management nodes, and job workloads go to job nodes. This involves node selectors and tolerations on the deployment side of things.
+
 ### >> Scaling Down To 0
 This actually began as a request for a brand new type of runner we had not implemented before. There was a new need to build Dockerfiles on `arm64`, so I began evaluating options. Just because you can doesn't mean you should, and while my first option was running a QEMU based build which could spit out multi-platform images from a single `amd64` node, it wasn't efficient and wasn't worth the effort. The developers already had a completely separate Dockerfile with different build steps, so why not just give them a runner to build on `arm64` natively?
 
 I decided to create nother managed nodegroup, but given the type of workload, the infrequency, and risk if jobs get interrupted, I decided it was worthwhile to base this on spot instances, plus while we're at it let's scale this one down to 0 since most of the time it's unused and would be sitting idle, wasting money.
 
-#### >>> Spot Instances
-This isn't too difficult. In the eksctl config, enable `spot: true` and be sure to specify at least 2 or 3 different instance types within the same family with the same minimum CPU/RAM specs. Just in case one type is not available during spot request, it can pick from something else so that jobs are not stuck pending. I also ran into this. You're already saving so much money, this is not the time to be a stickler.
-
-I think that's it, actually.
-
-#### >>> Scaling Back Up From 0
+#### > Scaling Back Up From 0
 The easy part is scaling down, that was already functioning. But Once you remove all instances from the ASG, now there's a problem. How does CA know which ASG to go modify? Previously, it would use the running Kubernetes node to discover ASG info. When you get to the point where this ASG has no worker nodes running in the cluster, CA has less visibility, requiring you to add a specific tag to the ASG that it uses to identify it.
+
+Specifically, you need to manually add a **tag** on the ASG `k8s.io/cluster-autoscaler/node-template/label/nodegroup: [your-nodegroup-name]` where you substitute the name of your nodegroup there, plus you need to have a **label** on your managed nodegroup that matches, which can be predefined in the eksctl config when you create the nodegroup.
