@@ -172,6 +172,7 @@ The easy part is scaling down, that was already functioning. But Once you remove
 Specifically, you need to manually add a **tag** on the ASG `k8s.io/cluster-autoscaler/node-template/label/nodegroup: [your-nodegroup-name]` where you substitute the name of your nodegroup there, plus you need to have a **label** on your managed nodegroup that matches, which can be predefined in the eksctl config when you create the nodegroup.
 
 ## > Scaling Down, Again
-Wait, there's more?! Yes, there's more.
+Wait, there's more?! Yes, there's more. This is the one I find the most interesting.
 
-So we're finally in a pretty good state. People know what to do if they see OOMKilled, they can 
+So we're finally in a pretty good state, and people know what to do if they see OOMKilled (they have documentation and practice adjusting limits). I receive another troubleshooting ticket. This time a job has failed because the pod was terminated unexpectedly. Let's dive into what happened.
+
