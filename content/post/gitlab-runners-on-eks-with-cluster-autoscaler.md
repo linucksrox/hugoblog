@@ -89,9 +89,15 @@ I see a couple of opportunities for improvement:
     - Visibility - we have an audit trail. If it's not in the repo, it's not in the cluster
   - I haven't even talked about what else is deployed in the cluster beyond gitlab runners. It's not much, but it's still something. FluxCD can and should also manage Cluster Autoscaler and Metrics Server.
   - FluxCD flips the traditional deployment model on its head, which has major security implications. If we grant FluxCD enough privileges to do its job, then we no longer need every engineer on our team to have full root access to the cluster via kubectl commands (any changes need to go through the repo, through FluxCD). Let's go into read only mode for debugging/troubleshooting but leave updates/writes to GitOps.
-    - Sure, we still need a way in, maybe a break-glass option. One simple approach would be to authenticate to the AWS account where EKS lives, manually add a new access entry, and boom, you're in. Document this. Or even automate this, put a script in the repo called "break glass" pipeline. It should be easy for anyone to find and execute, but also auditable.
+    - Sure, we still need a way in, maybe a break-glass option. One simple approach would be to authenticate to the AWS account where EKS lives, manually add a new access entry, and boom, you're in. Document this. Or even automate this, put a manual job in the repo pipeline called "break glass" with clear, simple instructions. It should be easy for anyone to find and execute, but also auditable.
 
 ## All Together
-Some things were tweaked a little bit between testing and deploying to production, but ultimately it was an extremely low risk deployment due to the ability to add the new EKS infrastructure in parallel with existing runners, allowing us to phase out the old stuff tag by tag. EKS runners have new, unique tags, and eventually we would add legacy tags, and finally phase out the old runners once we validated that jobs worked reliably.
+I've talked through most of the design, much of which came from the initial POC but some of which comes from having been running this in production for over a year and what I've learned as new needs arise.
+
+This also doesn't give the full picture of everything involved in making it work. Beyond deploying EKS, managed nodegroups, cluster autoscaler, metrics server, and gaining access to the cluster, we still have to deploy gitlab-runner processes and wire them up to gitlab to accept jobs. We also have to consider nuances when it comes to how cluster autoscaler works and some quirks that it has.
+
+Deploying this was a very low risk deployment due to the ability to add the new EKS infrastructure in parallel with existing runners, allowing us to phase out the old stuff tag by tag. EKS runners have new, unique tags, and eventually we would add legacy tags, and finally phase out the old runners once we validated that jobs worked reliably.
+
+It turned out to be very successful, despite having some snags along the way. We learned new things, and always came up with a new, better way to move forward.
 
 # Gotchas
