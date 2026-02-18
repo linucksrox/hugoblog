@@ -58,8 +58,6 @@ Originally, I was leaning toward putting everything in its own VPC. However, the
 
 I chose to place the EKS workers in the same VPC subnet as the existing runners due to IP allow listing on external systems from the NAT gateway EIP. It was easier if all outbound traffic came from the same IP. Don't get me started on why we send all of this traffic over the public internet to begin with, that's a battle for another day.
 
-One gotcha about the AWS CNI that comes out of the box is that assigns a unique IP from your VPC subnet to every pod. I was not expecting this, and during initial POC testing I quickly found out when I started scaling up parallel jobs. Luckily it's possible to add a new CIDR block to the existing VPC, so I went ahead and added a new block and split that into 2 subnets in different AZs, then wired those up to the existing route table and out through the existing NAT gateway. Crisis averted. We could have switched CNIs as well, but I was ready to move forward, and since this was supported it was a little bit less effort in the short term. If we start going beyond 1000 parallel jobs then I'll be revisiting this one and moving to something else. For now, we're well below that, so it's noted and we can move on.
-
 ## Compute
 The other primary decision to make was compute. EKS delivers the control plane, but you still need somewhere to run your stuff. Our two options are EC2 or Fargate.
 
@@ -69,6 +67,8 @@ Within EC2, I had 3 options: bring your own EC2, managed nodegroups, or auto mod
 
 ## Access Control
 I'm talking about specifically how to authenticate to the cluster API. It was a no-brainer to map IAM roles that our team already uses with SSO to Access Entries on the cluster. This allows us to go into the terminal, run `assume` (a granted.dev tool) and authenticate to AWS SSO.
+
+I evaluated IRSA, but there was more effort to integrate with our OIDC provider and we didn't have a need for fine-grained access controls up front.
 
 RBAC is an area where we have lots of room for improvement. For now, it's like giving the whole team root access to the whole cluster. Granted it's only our team who has any access, but we still don't follow the principal of least privilege here at this time, partly due to the process requiring manual updates via Helm, etc. No other teams require any level of access to the cluster, so we aren't concerned with taking a tiered approach in this particular situation.
 
@@ -98,6 +98,16 @@ This also doesn't give the full picture of everything involved in making it work
 
 Deploying this was a very low risk deployment due to the ability to add the new EKS infrastructure in parallel with existing runners, allowing us to phase out the old stuff tag by tag. EKS runners have new, unique tags, and eventually we would add legacy tags, and finally phase out the old runners once we validated that jobs worked reliably.
 
-It turned out to be very successful, despite having some snags along the way. We learned new things, and always came up with a new, better way to move forward.
+In the end it has been a success, despite having some snags along the way. We learned new things, and always came up with a new, better way to move forward. One of the major benefits to this architecture is the flexibility. It feels unlimited, there doesn't seem to be any hurdle too big to get past, and most hurdles have been fairly minor.
+
+Other factors I considered throughout this process:
+- Skillset. Our team is not experienced in Kubernetes, though several on the team are working towards the CKA certification. But with a team of Linux Admins, I know everyone is capable of following the steps. Once you get past the initial hurdle of getting authenticated and setting up local tools, the rest is pretty straightforward even for inexperienced engineers.
+  - The way I see it, this is a good way to level up our team in general. In many ways already, it demonstrates best practices and the way things could/should be. It gives everyone production experience with Kubernetes and this only makes us better.
+- Unknown behavior with migrating all of the different pipeline jobs to the new system. In theory it should work the same because it has the same default CPU/RAM resources available. In practice, resource limits are handled very differently. We are essentially introducing new limits or enforcing stricter limits than what we had previously. And this is essential so that we can tune scaling, establish safe defaults, and manage cost over time.
+- New maintenance schedule and process. EKS upgrades. Add-on upgrades. Component upgrades. Nodegroup AMI upgrades. The great news here is that it's possible to do all of these while workloads continue running, so we just unlocked significant maintenance improvements and security by extension by being able to keep things updated more frequently with less friction. And we can patch zero-day vulnerabilities any time with very little risk.
+- Migration from legacy runners. The plan was to introduce the new runners and ask developers to start testing. We had mixed results. The backup plan was to start switching tags to the new runners, and then removing those tags from the old runners, phasing them out. Once we phase the old runners out and haven't had any outages or break/fix tickets come in, we can finally decommission the old infrastructure and fully realize the security and cost savings.
 
 # Gotchas
+- `eksctl` - this is a handy utility, but is not idempotent by design. If you deploy a new cluster with this tool, and later on decide to change something about that cluster (but don't want to rebuild), you can't necessarily update your config and redeploy. Even the command is different: new builds are `eksctl create cluster` where certain changes can be done with `eksctl upgrade cluster`. Some changes to managed nodegroups can be done with `eksctl update nodegroup` but others require completely rebuilding the nodegroup. But in the end, the total cluster config and deployment pipeline is significantly simpler to build and understand than it would have been using Cloudformation.
+- The AWS CNI that comes out of the box is that assigns a unique IP from your VPC subnet to every pod. I was not expecting this, and during initial POC testing I quickly found out when I started scaling up parallel jobs. Luckily it's possible to add a new CIDR block to the existing VPC, so I went ahead and added a new block and split that into 2 subnets in different AZs, then wired those up to the existing route table and out through the existing NAT gateway. Crisis averted. We could have switched CNIs as well, but I was ready to move forward, and since this was supported it was a little bit less effort in the short term. If we start going beyond 1000 parallel jobs then I'll be revisiting this one and moving to something else. For now, we're well below that, so it's noted and we can move on.
+- After building the cluster (fully automated), it's in a vanilla state and requires you to manually deploy your resources. For us this includes Metrics Server, Cluster Autoscaler and gitlab-runners.
