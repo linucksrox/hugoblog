@@ -133,6 +133,10 @@ Does this mean EKS is worse or less reliable in a way? No. This makes it obvious
 
 We should understand what jobs cost from a resource and financial perspective, because that will allow us properly tune autoscaling, make things run much more efficiently, likely save significantly on cost, and make informed decisions on resource quota increases if needed.
 
+We're almost done with OOMkilled, but not quite. Guess what, it's super easy to override requests and limits in GitLab pipelines to ask for more CPU or RAM. I have this documented in a simple to follow guide with screenshots and specific examples of different messages that developers might see which could be related. I set upper limits on CPU and RAM requests. I explain why you should probably not set CPU limits, especially with Java workloads. And I just handed them self-service autonomy that frees up our team from troubleshooting OOMkill issues and rather provides developers what they need to keep working 24/7.
+
+There's more to talk about on this topic, including setting lower default limits once developers are more comfortable overriding these values. Looking at utilization, 8GB RAM is a pretty high limit which means we are very loosely packing jobs and wasting a lot of resources still. Keep in mind this still fits within the 50% savings estimate, but we could be doing significantly better by tightening up requests for most jobs that only need 1-2GB, and packing more of those jobs into a single worker. Another approach to this problem is encouraging developers who will listen to override their requests for lightweight jobs to lower values, proactively. Even if we leave the default at 8GB, if developers are proactive about this it can still offer them tangible benefits. They are more likely to get their jobs scheduled sooner, because a 2GB slot is easier to schedule than an 8GB slot, etc.
+
 ## > Cluster Autoscaler
 This one is more interesting than most of the other gotchas. This one took the most time and has caused most of the hurdles that we have had to overcome. Here's what I ran into, in order.
 
@@ -166,3 +170,8 @@ I decided to create nother managed nodegroup, but given the type of workload, th
 The easy part is scaling down, that was already functioning. But Once you remove all instances from the ASG, now there's a problem. How does CA know which ASG to go modify? Previously, it would use the running Kubernetes node to discover ASG info. When you get to the point where this ASG has no worker nodes running in the cluster, CA has less visibility, requiring you to add a specific tag to the ASG that it uses to identify it.
 
 Specifically, you need to manually add a **tag** on the ASG `k8s.io/cluster-autoscaler/node-template/label/nodegroup: [your-nodegroup-name]` where you substitute the name of your nodegroup there, plus you need to have a **label** on your managed nodegroup that matches, which can be predefined in the eksctl config when you create the nodegroup.
+
+## > Scaling Down, Again
+Wait, there's more?! Yes, there's more.
+
+So we're finally in a pretty good state. People know what to do if they see OOMKilled, they can 
