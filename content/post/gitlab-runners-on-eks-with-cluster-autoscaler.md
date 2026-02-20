@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: GitLab Runners On EKS Using Cluster Autoscaler
-date: 2026-02-19
+date: 2026-02-20
 tags:
   - kubernetes
   - eks
@@ -173,7 +173,27 @@ Specifically, you need to manually add a **tag** on the ASG `k8s.io/cluster-auto
 
 I may have missed how to do this. I scoured the documentation and spent some trial/error time on this, but was unable to find a solution to fully automate this tagging in the build pipeline. Therefore I have instructions to specify that whenever using a managed nodegroup that scales to 0, you need to manually add the appropriate tag on the ASG. It's one extra manual step. It would still be nice if it could be automated, and perhaps Copilot is right when it suggests it could be done by adding the right label in the right format within eksctl config.
 
+I should revisit this some time. Even 1 simple manual step can become a larger issue over time.
+
 ## > Scaling Down, Again
 Wait, there's more?! Yes, there's more. This is the one I find the most interesting. I'm not sure if favorite is the right word but...
 
 So we're finally in a pretty good state, and people know what to do if they see OOMKilled (they have documentation and practice adjusting limits). I receive another troubleshooting ticket. This time a job has failed because the pod was terminated unexpectedly. Let's dive into what happened.
+
+Starting with the failed job log, it clearly states...(WIP - to be continued)
+
+## > AZRebalance
+Here we go again. Another ticket comes in, another job terminated prematurely. I thought we fixed autoscaling (and we kind of did), but now the AZRebalance feature is biting us.
+
+Verifying the failed job log, it failed prematurely. Digging deeper, we look at ASG events and also CloudTrail, and find a tight correlation: a node was terminated seconds after the job failed unexpectedly. Full disclosure, `kiro-cli` is an amazing tool for digging through event history and logs in AWS, and correlating data with event times. It basically did all the work in this case, although it had completely the wrong event initially, I called out the timing mismatch, and it found another AZRebalance event that matched up perfectly.
+
+What happened in this case?
+- As nodes are scaled up and down, it's possible to find yourself in a situation where there's an unbalanced number of nodes in a single AZ.
+- Independently, AZRebalance is checking for this case. Its job is to rebalance when things are not balanced.
+- In order to balance things, AZRebalance will spin up a new node in another AZ with fewer nodes, and then it will terminate the extras in the hot-spot AZ.
+- AZRebalance doesn't discriminate, it doesn't even check what's running. It cares not about your workloads (and rightfully so, we need to build around this understanding). In this case, the node it selected as tribute was one that had production jobs running on it.
+
+What can we do about it?
+- We can add yet another tool, AWS Node Termination Handler. That also involves setting up an SQS Queue and EventBridge. Not the end of the world, but one more thing to maintain.
+  - More importantly, we are under pressure to deliver on other things right now, so building this out requires more engineering effort.
+- OR the quick and dirty approach is to disable AZRebalance. It's not ideal, but it got us in a more reliable state immediately. The caveat is that we document this, and make sure it's included in our backlog to resolve later on. This still leaves us in a potentially bad situation where nodes can hot-spot in a single AZ, exposing us to more risk if that AZ has an outage. But we are OK with the tradeoffs for the short term.
