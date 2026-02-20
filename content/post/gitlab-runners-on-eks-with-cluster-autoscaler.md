@@ -175,15 +175,17 @@ I may have missed how to do this. I scoured the documentation and spent some tri
 
 I should revisit this some time. Even 1 simple manual step can become a larger issue over time.
 
-## > Scaling Down, Again
+### >> Scaling Down, Again
 Wait, there's more?! Yes, there's more. This is the one I find the most interesting. I'm not sure if favorite is the right word but...
 
 So we're finally in a pretty good state, and people know what to do if they see OOMKilled (they have documentation and practice adjusting limits). I receive another troubleshooting ticket. This time a job has failed because the pod was terminated unexpectedly. Let's dive into what happened.
 
 Starting with the failed job log, it clearly states...(WIP - to be continued)
 
-## > AZRebalance
+### >> AZRebalance
 Here we go again. Another ticket comes in, another job terminated prematurely. I thought we fixed autoscaling (and we kind of did), but now the AZRebalance feature is biting us.
+
+This is not exactly related to Cluster Autoscaler, but kind of similar in a way. Instead of scaling up or down, it rebalances which is a fancy way of saying add a new node in a different AZ, then terminate a node in the hot-spot AZ.
 
 Verifying the failed job log, it failed prematurely. Digging deeper, we look at ASG events and also CloudTrail, and find a tight correlation: a node was terminated seconds after the job failed unexpectedly. Full disclosure, `kiro-cli` is an amazing tool for digging through event history and logs in AWS, and correlating data with event times. It basically did all the work in this case, although it had completely the wrong event initially, I called out the timing mismatch, and it found another AZRebalance event that matched up perfectly.
 
