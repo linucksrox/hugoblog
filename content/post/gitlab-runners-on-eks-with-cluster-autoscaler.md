@@ -2,7 +2,7 @@
 layout: blog
 draft: false
 title: GitLab Runners On EKS Using Cluster Autoscaler
-date: 2026-02-20
+date: 2026-02-23
 tags:
   - kubernetes
   - eks
@@ -180,7 +180,29 @@ Wait, there's more?! Yes, there's more. This is the one I find the most interest
 
 So we're finally in a pretty good state, and people know what to do if they see OOMKilled (they have documentation and practice adjusting limits). I receive another troubleshooting ticket. This time a job has failed because the pod was terminated unexpectedly. Let's dive into what happened.
 
-Starting with the failed job log, it clearly states...(WIP - to be continued)
+Starting with the failed job log, it clearly states that the pod was terminated before the timeout, which was unexpected. I looked at the cluster autoscaler logs to find that it scaled down the very node this job was running on.
+
+Back to the documentation: https://docs.aws.amazon.com/eks/latest/best-practices/cas.html
+- I find a section named "Prevent Scale Down Eviction" which clearly states that expensive to evict pods should have the annotation `cluster-autoscaler.kubernetes.io/safe-to-evict=false`
+- I apply the annotation and test in a test environment (run several long-running jobs in parallel to trigger scale-up, then wait)
+- It doesn't help, and Cluster Autoscaler is still resulting in premature job termination during scale-down
+
+What's wrong with Cluster Autoscaler on EKS, and why doesn't it behave as advertised in the AWS documentation? I can't answer that question, to be honest. The documentation is in fact wrong. It actually doesn't work. Is there a bug with the Cluster Autoscaler?
+
+I found an issue on Cluster Autoscaler's GitHub page that matches my symptoms: https://github.com/kubernetes/autoscaler/issues/8196
+
+If I understand the analysis correctly, the root cause is related to AZRebalance and how AWS terminates nodes when decreasing the desired capacity on the ASG. It's not a bug that can be fixed in Cluster Autoscaler, and AWS is not going to address this issue on their end.
+
+OK... so what can we do?
+
+I figured since there will be no official fix, we should try to work around the issue. PodDisruptionBudget came to mind. What if you can apply a PDB with `maxUnavailable: 0`? I tried it, and this time it worked. Great.
+
+I posted my workaround in the GitHub issue so that hopefully it helps some people:https://github.com/kubernetes/autoscaler/issues/8196#issuecomment-3353620324
+
+One last thing to note about this workaround: The documentation explains that using .spec.maxUnavailable is unsupported when using a PDB selector on a resource that is managed by something else. We are in a gray area, because while the gitlab-runner deployment is responsible for deploying job pods, the pods themselves aren't controlled by something else like a ReplicaSet or Deployment. So having the label/selector on the pod, combined with .spec.maxUnavailable does work as expected. However, there are `UnmanagedPods` warnings in the PDB event history:
+`Pods selected by this PodDisruptionBudget (selector: &LabelSelector{MatchLabels:map[string]string{eviction-protection-pdb: true,},MatchExpressions:[]LabelSelectorRequirement{},}) were found to be unmanaged. As a result, the status of the PDB cannot be calculated correctly, which may result in undefined behavior. To account for these pods please set ".spec.minAvailable" field of the PDB to an integer value.`
+
+I'm OK with this warning because this works exactly as I expect it to. I have this documented thoroughly for future reference, and I consider this one mitigated.
 
 ### >> AZRebalance
 Here we go again. Another ticket comes in, another job terminated prematurely. I thought we fixed autoscaling (and we kind of did), but now the AZRebalance feature is biting us.
