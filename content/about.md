@@ -3,7 +3,7 @@ title: "About Me"
 date: 2026-03-03
 ---
 
-I'm always seeking out new techhnology and trying out new systems on my homelab. Over time I've added more and more systems to my homelab that I use daily. I prefer open source software when possible over proprietary solutions, but also understand the pros/cons of when it makes sense to use paid (supported) solutions. I also try to give back by sharing my experience and knowledge with other people on community forums like [Nextcloud](https://help.nextcloud.com) and [Reddit](https://reddit.com), along with sharing detailed documention right here on my blog to help fill some gaps.
+I'm always seeking out new technology and trying out new systems on my homelab. Over time I've added more and more systems to my homelab that I use daily. I prefer open source software when possible over proprietary solutions, but also understand the pros/cons of when it makes sense to use paid (supported) solutions. I also try to give back by sharing my experience and knowledge with other people on community forums like [Nextcloud](https://help.nextcloud.com) and [Reddit](https://reddit.com), along with sharing detailed documention right here on my blog to help fill some gaps.
 
 My Home Lab
 ---
@@ -22,9 +22,9 @@ Here are some of the services I run:
 - Immich for photo backup and sharing - a vast improvement over Nextcloud when it comes to searching and reliability of backups
 - restic backup software which grabs a majority of my data shared from the NAS and sends it to Backblaze B2 (and encrypts/deduplicates it!). I have a series of scripts which are scheduled via cron to backup, check the backup, and prune old "expired" snapshots. I'm doing close to 2TB to the cloud currently for around $16/month, at the expense of some manual monitoring/intervention and initial work into the scripts. Not bad!
 - Traefik reverse proxy (both in Docker and as a Kubernetes ingress controller)
-- Wireguard VPN - considering Netbird or some other mesh based VPN but have not gone down that road yet
+- Netbird - this is an awesome VPN to access my homelab and services when I'm out and about
+- Wireguard VPN - this is the old, reliable VPN backup for when Netbird is funky
 - VitalPBX combined with Voip.ms service, allowing me to use my phone as a SIP extension and make outgoing calls from my house. Without this it's difficult to make calls without going outside due to flaky cell service in my area.
-- (deprecated) Prosody as a chat server using the XMPP protocol (paired with Conversations for Android). This is far more reliable than SMS and especially MMS.
 - Gitlab (running on Docker) for keeping track of small projects that I don't want to put on github
 - Docker in swarm mode for quickly spinning up new services.
   - Vaultwarden for password management, self hosted (alternative to LastPass, Dashlane, etc.)
