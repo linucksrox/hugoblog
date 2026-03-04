@@ -7,7 +7,7 @@ I'm always seeking out new technology and trying out new systems on my homelab. 
 
 My Home Lab
 ---
-My short term goal is to replace my old 2U HP DL380p Gen8 server with 3 Minisforum MS-01 units. I currently have 3 of those clustpered with the old server, for a total of 4 hosts. This is great for learning about Proxmox clustering, high availability and practicing managing a more enterprise-y type of setup. It also makes it possible (along with Kubernetes and other systems) to perform hardware maintenance with no downtime. Overkill for a homelab, but this is what keeps me sharp!
+My short term goal is to replace my old 2U HP DL380p Gen8 server with 3 Minisforum MS-01 units. I currently have 3 of those clustered with the old server, for a total of 4 hosts. This is great for learning about Proxmox clustering, high availability and practicing managing a more enterprise-y type of setup. It also makes it possible (along with Kubernetes and other systems) to perform hardware maintenance with no downtime. Overkill for a homelab, but this is what keeps me sharp!
 
 I recently wired these up using a Unifi Aggregation switch (8 10G networking ports) and split out a bunch of stuff on different VLANs. This really helped with both Proxmox cluster performance but more importantly Longhorn storage performance for the Talos cluster. I use the v2 data engine for that BTW, and it has been for the most part rock-solid.
 
